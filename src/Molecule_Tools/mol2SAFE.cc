@@ -204,6 +204,11 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('I') && cl.option_present('P')) {
+    cerr << "Sorry, only one of the -I and -P options can be used\n";
+    Usage(1);
+  }
+
   if (cl.option_present('I')) {
     if (!cl.value('I', _isotope)) {
       cerr << "Options::Initialise:invalid isotope specification (-I)\n";
@@ -568,7 +573,7 @@ Options::Process(Molecule& m, int hring, IWString_and_File_Descriptor& output) {
       // Note we deliberately store the atom type of the connected atom, not the atom
       // itself.
       m.set_isotope(a1, data.AtomType(a2));
-      m.set_isotope(a1, data.AtomType(a1));
+      m.set_isotope(a2, data.AtomType(a1));
     }
   }
 

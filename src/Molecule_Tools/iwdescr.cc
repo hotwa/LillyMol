@@ -2279,7 +2279,7 @@ write_the_output(Molecule & m,
     }
 
     output << output_separator;
-    cerr << "writing " << i << std::endl;
+//  cerr << "writing " << i << std::endl;
 
     float v;
     if (descriptor[i].value(v)) {

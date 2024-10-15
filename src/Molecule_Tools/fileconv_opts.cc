@@ -3860,8 +3860,9 @@ FileconvConfig::GetIsotopeDirectives(Command_Line& cl, char flag) {
         }
       }
 
-      if (verbose)
+      if (verbose) {
         cerr << "Will convert all isotope " << a << " values to isotope " << b << "\n";
+      }
 
       convert_specific_isotopes.add(a);
       convert_specific_isotopes_new_isotope.add(b);

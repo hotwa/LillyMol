@@ -41,8 +41,12 @@ message Config {
 
   optional uint32 max_distance_difference = 14;
 
-  // Substructure queries that will drop molecules.
-  repeated string discard_if_match = 15;
+  // If used, this must be the same as was given to the -P option
+  // to mol2SAFE
+  optional string atom_type = 15;
 
-  optional MoleculeFilterData.Requirements molecule_filter = 16;
+  // Substructure queries that will drop molecules.
+  repeated string discard_if_match = 16;
+
+  optional MoleculeFilterData.Requirements molecule_filter = 17;
 }

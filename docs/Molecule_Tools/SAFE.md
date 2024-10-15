@@ -43,7 +43,7 @@ All involve first running mol2SAFE in order to generate the SAFE representations
 
 During testing, the following invocation seemed useful.
 ```
-mol2SAFE -v -c -l -I 1 -S Sfile -M 16 -M maxnr=9 -g all -z -T I=Cl -T Br=Cl chembl.smi > chembl.safe.smi
+mol2SAFE -v -c -l -I 1 -S chembl.lib.textproto -M 16 -M maxnr=9 -g all -z -T I=Cl -T Br=Cl chembl.smi > chembl.safe.smi
 ```
 Takes less than 3 minutes to process a recent version of Chembl.
 
@@ -81,12 +81,28 @@ from active molecules, and then feed all active molecules to safe_generate in or
 generate molecules where likely active fragments get combined across product
 molecules.
 
+The library file generated with the -S option is a textproto file and might look like
+```
+iso: ATT smi: "C12=C(C=[1CH]C=[1CH]1)CNC(=O)O2" par: "CHEMBL162861" n: 1 
+iso: ATT smi: "[1CH]1=[1CH]C=C2[1CH]=C3C(=CC2=C1)[1CH2]OC3=O" par: "CHEMBL512822" n: 1 
+iso: ATT smi: "C12=C([1CH]=C[1CH]=[1CH]1)CC[1CH2]2" par: "CHEMBL62102" n: 44 
+iso: ATT smi: "N1=[1CH]N=C2[1NH]C3=C([1CH]=C2C1=O)C=CC=C3" par: "CHEMBL484575" n: 12 
+iso: ATT smi: "[1CH2]1C2=C(CCC3=C1C=CC=C3)C=CC=N2" par: "CHEMBL64593" n: 4 
+iso: ATT smi: "C12=C(C(=O)[1NH]C(=O)[1NH]1)N1C=C[1CH]=CC1=N2" par: "CHEMBL112098" n: 43 
+iso: ATT smi: "C12(CCCCC1)NC(=O)C1=C(C3=CC=[1CH][1CH]=C3[1NH]1)[1CH2]2" par: "CHEMBL1945341" n: 1 
+iso: ATT smi: "N1C(=O)C2(C3=C1C=C[1CH]=C3)ON=[1CH][1NH]2" par: "CHEMBL3797426" n: 16 
+iso: ATT smi: "C1[1CH]=CC2C(=C1)[1CH2]CC[1CH2]2" par: "CHEMBL3983484" n: 1 
+```
+where the "par" field holds the name of the first molecule encountered that generated
+this fragment, and "n" is the number of instances found across all of Chembl. Isotopes
+mark the attachment points.
+
 ## safe_generate
 Once a SAFE fragment library file has been built, and/or the input set of molecules
 converted to SAFE form, safe_generate can be run. Configuration via a textproto config
 file is preferred.
 ```
-safe_generate -p -e 2000 -b 3000 -n 1000 -C generate.textproto -v -L Sfile input.smi
+safe_generate -p -e 2000 -b 3000 -n 1000 -C generate.textproto -v -L chembl.lib.textproto input.smi
 ```
 The -n option specifies up to 1000 variants by replacing SAFE fragments with randomly
 selected fragments from the library - mode #1.
@@ -158,6 +174,47 @@ There is no recursion built into safe_generate, but if SAFE smiles are written,
 advantage of seamlessly using multiple cores. But since the two processes are
 separate, duplicate detection is not robust. Adding recursion would add
 code complexity, and is not a priority now.
+
+For a given set of molecules, it might be hard to anticipate the maximum
+number of candidates that can be generated. Usually the available fragments
+are generated fairly quickly, so we can end up with the unfortunate
+situation of having asked for (say) 100k new molecules, but after a few
+seconds, no more will be found. The -k option says that if a sequence
+of unsuccessful attempts longer than the -k option is encountered,
+abandon the calculation.
+
+So something like
+```
+safe_generate -n 100000 ... -k 2000 input.safe.smi
+```
+might be desirable.
+
+The full usage message is
+```
+Denovo generation of molecules from SAFE smiles.
+Consumes the output from mol2SAFE, and the -L file is also from mol2SAFE.
+
+mol2SAFE ... -S library.textproto file.smi > file.safe.smi
+safe_generate ... -L library.textproto -C generate.config file.safe.smi > new_molecules.smi
+
+ -C <fname>             safe_generate textproto configuration file.
+ -a <ncon>              maximum value for number of connections processed - applied to library.
+ -L <fname>             fragment library of SAFE fragments
+ -Y <query>             queries for atoms that are allowed to change
+ -N <query>             queries for atoms that are NOT allowed to change
+ -z i                   ignore molecules not matching queries
+ -x extra=<n>           the number of extra atoms in a fragment being substitued
+ -x fewer=<n>           the number of fewer atoms in a fragment being substitued
+ -n <n>                 number of molecules to generate by fragment swap from library
+ -b <n>                 number of molecules to generate by breeding
+ -e <n>                 for each molecule, exhaustively scan the library(s) making all possibilities.
+                        For each molecule, a max of <n> variants are made. Use '-e 0' for no limit.
+ -F <fname>             molecule filter textproto file - products must pass
+ -p                     write the parent molecule before variants
+ -s                     write SAFE smiles
+ -k <number>            abandon if no new molecules formed for <number> steps
+ -v                     verbose output
+```
 
 ## Examples
 Given

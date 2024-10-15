@@ -25,6 +25,7 @@ TomlToProto(toml::table& tbl) {
   std::stringstream ss;
   ss << toml::json_formatter{tbl};
   const std::string as_json = ss.str();
+  std::cerr << "json " << as_json << '\n';
 
   Proto proto;
 

@@ -21,6 +21,7 @@
 #include "Foundational/iwstring/absl_hash.h"
 
 #include "Molecule_Lib/aromatic.h"
+#include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
@@ -86,6 +87,7 @@ safe_generate ... -L library.textproto -C generate.config file.safe.smi > new_mo
  -F <fname>             molecule filter textproto file - products must pass
  -p                     write the parent molecule before variants
  -s                     write SAFE smiles
+ -k <number>            abandon if no new molecules formed for <number> steps
  -v                     verbose output
 )";
 // clang-format on
@@ -113,11 +115,15 @@ class SafedMolecule {
     std::mt19937 _rng;
     std::unique_ptr<std::uniform_int_distribution<uint32_t>> _dist;
 
+    // We may have atom types.
+    atom_type_t* _atype;
+
     // Private functions
     int GetFragment(atom_number_t zatom) const;
 
   public:
     SafedMolecule();
+    ~SafedMolecule();
 
     int Build(const const_IWSubstring& buffer);
 
@@ -149,6 +155,15 @@ class SafedMolecule {
 
     int SetupRng();
 
+    int AssignAtomTypes(Atom_Typing_Specification& ats);
+
+    const atom_type_t* AtomTypes() {
+      return _atype;
+    }
+    atom_type_t AtomType(atom_number_t zatom) const {
+      return _atype[zatom];
+    }
+
     // Given a set of queries, perform the searches. For every match examine
     // the matched atoms, and any fragment that contains a matched atom is
     // marked for being OK to change.
@@ -170,6 +185,13 @@ SafedMolecule::SafedMolecule() {
   std::random_device rd;
   _rng.seed(rd());
   _max_attempts = 10;  // arbitrary number.
+  _atype = nullptr;
+}
+
+SafedMolecule::~SafedMolecule() {
+  if (_atype != nullptr) {
+    delete [] _atype;
+  }
 }
 
 int
@@ -197,6 +219,15 @@ SafedMolecule::DebugPrint(std::ostream& output) const {
 }
 
 int
+SafedMolecule::AssignAtomTypes(Atom_Typing_Specification& ats) {
+  if (_atype == nullptr) {
+    _atype = new atom_type_t[_m.natoms()];
+  }
+
+  return ats.assign_atom_types(_m, _atype);
+}
+
+int
 SafedMolecule::Build(const const_IWSubstring& buffer) {
   const_IWSubstring smiles, id;
   if (! buffer.split(smiles, ' ', id) ||
@@ -215,6 +246,9 @@ SafedMolecule::Build(const const_IWSubstring& buffer) {
 
   _m.set_name(id);
 
+  _frag_start_smiles << 0;
+  _frag_start_atom << 0;
+
   const_IWSubstring token;
   int i = 0;
   int prev_i = i;
@@ -228,6 +262,7 @@ SafedMolecule::Build(const const_IWSubstring& buffer) {
     }
 
     atom_count += f->natoms();
+    f->set_name(id);
     _frag << f.release();
     _frag_start_smiles << prev_i;
     _frag_start_atom << atom_count;
@@ -275,6 +310,13 @@ SafedMolecule::GetFragment(atom_number_t zatom) const {
     }
   }
 
+  cerr << "SafedMolecule::GetFragment:cannot find fragment for atom " << zatom << '\n';
+  cerr << "Have " << _m.natoms() << " atoms\n";
+  cerr << "Fragment starts ";
+  for (int f : _frag_start_atom) {
+    cerr << ' ' << f;
+  }
+  cerr << '\n';
   cerr << "SafedMolecule::GetFragment:this should not happen\n";
   return -1;
 }
@@ -638,6 +680,8 @@ class Options {
 
     std::optional<uint32_t> _max_distance_difference;
 
+    Atom_Typing_Specification _atom_typing_specification;
+
     // The -X option.
     resizable_array_p<Substructure_Query> _discard_if_match;
 
@@ -666,6 +710,10 @@ class Options {
     absl::flat_hash_set<IWString> _seen;
 
     int _remove_isotopes;
+
+    // If we have not generated any new molecules for this many steps,
+    // give up.
+    int _abandon_for_futility;
 
     uint64_t _number_from_breeding;
     uint64_t _number_from_exhaustive;
@@ -787,6 +835,8 @@ Options::Options() {
   _max_atoms_in_fragment = std::numeric_limits<int>::max();
 
   _remove_isotopes = 0;
+
+  _abandon_for_futility = 0;
 
   _new_molecules_formed = 0;
   _rejected_by_bad_valence = 0;
@@ -994,6 +1044,17 @@ Options::Initialise(Command_Line& cl) {
     }
   }
 
+  if (cl.option_present('k')) {
+    if (! cl.value('k', _abandon_for_futility)) {
+      cerr << "Invalid abandon for futility (-k)\n";
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Will abandon calculations unless a new molecule generated every " <<
+                _abandon_for_futility << " steps\n";
+    }
+  }
+
   return 1;
 }
 
@@ -1073,6 +1134,18 @@ Options::TransferFromConfig(const safe_generate::Config& proto) {
 
   if (proto.has_max_distance_difference()) {
     _max_distance_difference = proto.max_distance_difference();
+  }
+
+  if (proto.has_atom_type()) {
+    const_IWSubstring t = proto.atom_type();
+    if (! _atom_typing_specification.build(t)) {
+      cerr << "Options::TransferFromConfig:invalid atom typing specification " <<
+        proto.atom_type() << '\n';
+      return 0;
+    }
+    if (_verbose) {
+      cerr << "Atom typing initialised " << proto.atom_type() << '\n';
+    }
   }
 
   return 1;
@@ -1284,15 +1357,21 @@ Options::Generate(SafedMolecule& m, int ngenerate, IWString_and_File_Descriptor 
   int generated = 0;
 
   int max_attempts = ngenerate * 10;
+  int last_successful = 0;
 
-  if (_library.size() == 1) {
-    for (int i = 0; i < max_attempts && generated < ngenerate; ++i) {
-      generated += Generate(m, *_library[0], output);
+  for (int attempts = 0; attempts < max_attempts && generated < ngenerate; ++attempts) {
+    int libindex = 0;
+    if (_library.size() >= 1) {
+      libindex = (*_libs_dist)(_rng);
     }
-  } else {
-    for (int i = 0; i < max_attempts && generated < ngenerate; ++i) {
-      const int libindex = (*_libs_dist)(_rng);
-      generated += Generate(m, *_library[libindex], output);
+    if (Generate(m, *_library[libindex], output)) { 
+      ++generated;
+      last_successful = attempts;
+    } else if (last_successful + _abandon_for_futility > attempts) {
+      if (_verbose) {
+        cerr << "Options::Breed:abandon after " << attempts << " attempts\n";
+      }
+      break;
     }
   }
 
@@ -1531,6 +1610,7 @@ int
 Options::Breed(int nbreed, IWString_and_File_Descriptor& output) {
   int generated = 0;
   int max_attempts = 50 * nbreed;
+  int last_successful = 0;
   for (int attempts = 0; generated < nbreed && attempts < max_attempts; ++attempts) {
     int m1 = (*_mols_dist)(_rng);
     int m2 = 0;
@@ -1543,6 +1623,12 @@ Options::Breed(int nbreed, IWString_and_File_Descriptor& output) {
     // cerr << "Breeding with " << m1 << " and " << m2 << " generated " << generated << '\n';
     if (Breed(*_mols[m1], *_mols[m2], output)) {
       ++generated;
+      last_successful = attempts;
+    } else if (last_successful + _abandon_for_futility > attempts) {
+      if (_verbose) {
+        cerr << "Options::Breed:abandon after " << attempts << " attempts\n";
+      }
+      break;
     }
   }
 
@@ -1563,6 +1649,10 @@ Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
   }
 
   f1 = *maybef1;
+
+  if (_atom_typing_specification.active()) {
+    return SelectFragmentsAtype(m1, m2, f1, f2);
+  }
 
   int atoms_in_f1 = m1.fragment(f1)->natoms();
   int ncon1 = m1.fragment(f1)->ncon();
@@ -1588,6 +1678,55 @@ Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
   }
 
   return f2 >= 0;
+}
+
+int
+Options::SelectFragmentsAtype(SafedMolecule& m1, const SafedMolecule& m,
+  const SafeFragment* frag1 = m1.fragment(f1);
+
+  const int atoms_in_f1 = frag1->natoms();
+
+  // cerr << "Finding frag with " << ncon1 << " connections, with " << atoms_in_f1 << " atoms\n";
+
+  // First determine the atom types that must be present in the second fragment.
+  resizable_array<atom_type_t> types_needed;
+
+  const Molecule& f1m = *frag1->mol();
+  for (const Atom& a : f1m) {
+    if (a.isotope() == 0) {
+      continue;
+    }
+    types_needed << a.isotope();
+  }
+
+  int ncon1 = frag1->ncon();
+  if (ncon1 != types_needed.number_elements()) {
+    cerr << "Options::SelectFragmentsAtype:fragment has " << ncon << " connections but " <<
+            "found " << types_needed << " isotopic atoms\n";
+    return 0;
+  }
+
+  // Find the matching fragment in `m2` closest to atoms_in_f1.
+  // Note that we do not respect the ok_to_select attribute?
+  const int nf2 = m2.number_fragments();
+
+  f2 = -1;
+  int min_diff = std::numeric_limits<int>::max();
+  for (int i = 0; i < nf2; ++i) {
+    const SafeFragment* f = m2.fragment(i);
+    if (ncon1 != f->ncon()) {
+      continue;
+    }
+
+    int d = std::abs(f->natoms() - atoms_in_f1);
+    if (d < min_diff) {
+      min_diff = d;
+      f2 = i;
+    }
+  }
+
+  return f2 >= 0;
+                              int f1, int& f2) {
 }
 
 int
@@ -1793,7 +1932,7 @@ Options::MakeAllLibrary(const SafedMolecule& m,
 
 int
 SafeGenerate(int argc, char** argv) {
-  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:a:C:z:X:F:x:n:pb:se:I");
+  Command_Line cl(argc, argv, "vE:T:A:lcg:i:L:Y:N:a:C:z:X:F:x:n:pb:se:Ik:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";

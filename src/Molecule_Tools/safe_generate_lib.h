@@ -63,6 +63,16 @@ class SafeFragment {
     // matches in the parent molecule.
     int _ok_to_select;
 
+    // If atom type matching is in effect, we keep a list of the
+    // isotopes (atom types). Note that this is complicated by
+    // the fact that in order to actually match a fragment, we would
+    // need to adjust the ring opening and closings to match the
+    // atom types. Not sure we will do that with the SAFE generation
+    // tool, but may wait for the Molecule based generator.
+    // This is just a list of the isotopes at the join points. By
+    // construction it will be same order as `_first_digit`.
+    resizable_array<atom_type_t> _atypes;
+
   // Private functions
     int ProcessSquareBracket(const IWString& smi, int &i, int& next_ring,
                      IWString& destination);
@@ -74,6 +84,9 @@ class SafeFragment {
 
     const IWString& name() const {
       return _m.name();
+    }
+    void set_name(const IWString& s) {
+      _m.set_name(s);
     }
 
     int natoms() const {

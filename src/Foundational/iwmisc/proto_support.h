@@ -200,6 +200,9 @@ ReadTextProtoCommentsOK(IWString& fname) {
   if (fname.ends_with(".json")) {
     return ReadTextProtoJson<Proto>(fname);
   }
+  if (fname.ends_with(".toml")) {
+    return ReadTomlProto<Proto>(fname);
+  }
 
   iwstring_data_source input(fname);
   if (! input.good()) {

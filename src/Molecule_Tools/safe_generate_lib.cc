@@ -288,6 +288,9 @@ SafeFragment::Build(const const_IWSubstring& smi) {
       if (_m.isotope(i) == 0) {
         continue;
       }
+
+      _atypes << static_cast<atom_type_t>(_m.isotope(i));
+
       for (int j = i + 1; j < _natoms; ++j) {
         if (_m.isotope(j) == 0) {
           continue;

@@ -2,6 +2,9 @@
   (A I Version 2)
   (A C Comment "anthra_ketone")
   (A I min_nrings 3)
-  (A I min_aromatic_ring_count 3)
-  (A C smarts "[cR>1]12ccccc1cc3c(=*)cccc3C2=[O,N,S]")
+  (0 ring_system_specifier
+    (A I min_nrings 3)
+    (A I min_aromatic_ring_count 2)
+  )
+  (A C smarts "[O,N,S]=[CR]1c2ccccc2[#6]c3c(=*)cccc31")
 )
