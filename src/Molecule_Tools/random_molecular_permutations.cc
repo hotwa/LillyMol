@@ -23,6 +23,9 @@
 #include "Foundational/iwstring/iw_stl_hash_map.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
+#include "Utilities/GFP_Tools/gfp_standard.h"
+#include "Utilities/GFP_Tools/sparse_collection.h"
+
 #include "Molecule_Lib/aromatic.h"
 #include "Molecule_Lib/istream_and_type.h"
 #include "Molecule_Lib/molecule.h"
@@ -32,10 +35,11 @@
 #include "Molecule_Lib/qry_wstats.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/random_molecular_permutations.pb.h"
-#include "Molecule_Tools/set_of_target_molecules.h"
-#include "Utilities/GFP_Tools/gfp_standard.h"
-#include "Utilities/GFP_Tools/sparse_collection.h"
+#else
+#include "random_molecular_permutations.pb.h"
+#endif
 
 using std::cerr;
 using iwmisc::Fraction;

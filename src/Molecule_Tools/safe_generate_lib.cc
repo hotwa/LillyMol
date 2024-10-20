@@ -156,6 +156,13 @@ BondsOk(Molecule& m) {
     if (z1 == 8 && z2 == 8) {
       return 0;
     }
+    // S-O bonds fail
+    if (z1 == 8 && z2 == 16) {
+      return 0;
+    }
+    if (z1 == 16 && z2 == 8) {
+      return 0;
+    }
 
     // One atom must be a carbon.
     if (z1 > z2) {

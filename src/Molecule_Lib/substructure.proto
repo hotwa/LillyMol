@@ -530,7 +530,7 @@ message InterRingAtoms {
   // implementation to make it work.
   // An inter-ring region can be defined by global_id's set by ring or
   // ring systems. What this means is that internally, rings and ring systems
-  // must be perceived beofre inter-ring regions are perceived.
+  // must be perceived before inter-ring regions are perceived.
   // There must be at least two values specified. ALL atoms between those rings
   // are included - even if that includes ring atoms.
   // what happens if we specify two numbers, but there is another ring attached? That fails?

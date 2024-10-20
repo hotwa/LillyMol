@@ -761,6 +761,8 @@ class Options {
     int SelectAtomCount(const SafeFragment& f);
     int SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
                 int& f1, int& f2);
+    int SelectFragmentsAtype(SafedMolecule& m1, const SafedMolecule& m,
+                              int f1, int& f2);
 
     int MakeAllLibrary(const SafedMolecule& m, uint64_t max_make, IWString_and_File_Descriptor& output);
     int MakeAllLibrary(const SafedMolecule& m,
@@ -1578,6 +1580,7 @@ Options::ProcessNewMolecule(Molecule& m, const IWString& name1,
   }
 
   output << ' ' << m.name() << '\n';
+  output << f2.smiles() << ' ' << f2.name() << ' ' << f2.nrings() << '\n';
 
   return 1;
 }
@@ -1682,6 +1685,12 @@ Options::SelectFragments(SafedMolecule& m1, const SafedMolecule& m2,
 
 int
 Options::SelectFragmentsAtype(SafedMolecule& m1, const SafedMolecule& m,
+                              int f1, int& f2) {
+
+  // TODO:ianwatson. Maybe implement this sometime, seems hard.
+  cerr << "SelectFragmentsAtype:not implemented\n";
+  std::exit(1);
+#ifdef SELECTFRAGMENTSATYPE_DONE
   const SafeFragment* frag1 = m1.fragment(f1);
 
   const int atoms_in_f1 = frag1->natoms();
@@ -1726,7 +1735,7 @@ Options::SelectFragmentsAtype(SafedMolecule& m1, const SafedMolecule& m,
   }
 
   return f2 >= 0;
-                              int f1, int& f2) {
+#endif
 }
 
 int

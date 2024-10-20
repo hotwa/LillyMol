@@ -702,6 +702,7 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Lib:substructure_cc_proto",
+        "@highwayhash//:highwayhash",
         "@com_google_protobuf//:protobuf",
     ],
 )

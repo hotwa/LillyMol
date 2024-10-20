@@ -19,6 +19,9 @@
 #include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 
+#include "highwayhash/highwayhash_target.h"
+#include "highwayhash/instruction_sets.h"
+
 #define RESIZABLE_ARRAY_IMPLEMENTATION 1
 #define IWQSORT_FO_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
@@ -54,7 +57,6 @@
 #include "Molecule_Tools/dicer_lib.h"
 
 using std::cerr;
-using std::endl;
 
 using dicer_lib::USPVPTR;
 using dicer_lib::InitialAtomNumber;
@@ -131,9 +133,9 @@ static IW_STL_Hash_Map_uint molecules_containing;
 static int fragments_indexed_by_unique_smiles = 1;
 
 /*
- During writing the fragstat file, we want to know the identity of the
- molecule that gives rise to each fragment.
- */
+  During writing the fragstat file, we want to know the identity of the
+  molecule that gives rise to each fragment.
+*/
 
 static IW_STL_Hash_Map_String starting_parent;
 
@@ -201,6 +203,15 @@ static Accumulator<double> whole_set;
 static IWString smiles_tag("$SMI<");
 static IWString identifier_tag("PCN<");
 static IWString fingerprint_tag;
+
+
+// If we wish to generate a fingerprint that is not dependent on bit
+// numbers encountered, we can hash the unique smiles of each fragment and generate
+// a fingerprint that will be invariant across invocations.
+// So if a fingerprint is being generated, we keep a cross reference
+// from bit number to a hash of the unique smiles, and this must span
+// all molecules being processed.
+static int fingerprint_uses_hashed_smiles = 0;
 
 static int function_as_filter = 0;
 
@@ -639,6 +650,7 @@ reset_variables()
 	 bbrk_file.resize(0);
 	 bbrk_tag.resize(0);
      check_for_lost_chirality = 0;
+     fingerprint_uses_hashed_smiles = 0;
      return;
 }
 
@@ -1032,6 +1044,7 @@ class Dicer_Arguments
            DicerFragmentOutput& output) const;
 
     int MaybeAddToHash(const IWString& smiles);
+    int MaybeAddToSmilesHash(const IWString& smiles);
 
   public:
     Dicer_Arguments (int mrd);            // arg is max recursion depth
@@ -2249,7 +2262,7 @@ Dicer_Arguments::adjust_max_recursion_depth(int bonds_to_break_this_molecule,
   }
 
 #ifdef DEBUG_ADJUST_MAX_RECURSION_DEPTH
-  cerr << "At " << _max_recursion_depth_this_molecule << ", " << bonds_to_break_this_molecule << " will produce " << fragments_that_will_be_produced << endl;
+  cerr << "At " << _max_recursion_depth_this_molecule << ", " << bonds_to_break_this_molecule << " will produce " << fragments_that_will_be_produced << '\n';
 #endif
 
   return fragments_that_will_be_produced;
@@ -2258,8 +2271,9 @@ Dicer_Arguments::adjust_max_recursion_depth(int bonds_to_break_this_molecule,
 void
 Dicer_Arguments::_add_new_smiles_to_global_hashes(const IWString & smiles)
 {
-  if (!add_new_strings_to_hash)
+  if (!add_new_strings_to_hash) {
     return;
+  }
 
   unsigned int s = smiles_to_id.size();
 
@@ -2397,21 +2411,24 @@ Dicer_Arguments::contains_fragment(Molecule & m)
 
 int
 Dicer_Arguments::MaybeAddToHash(const IWString& smiles) {
+  if (fingerprint_uses_hashed_smiles) {
+    return MaybeAddToSmilesHash(smiles);
+  }
 
   // std::cerr << smiles << " ####" << _recursion_depth << '\n';
 
   IW_STL_Hash_Map_uint::iterator f1 = smiles_to_id.find(smiles);
 
-  if (f1 == smiles_to_id.end())         // fragment never been seen before
-  {
+  if (f1 == smiles_to_id.end()) {         // fragment never been seen before
     if (! add_new_strings_to_hash)
       return 0;
 
     _add_new_smiles_to_global_hashes(smiles);
 
-    //  cerr << "New fragment generated from '" << _current_molecule->name() << "', acc " << accumulate_starting_parent_information <<endl;
-    if (accumulate_starting_parent_information)
+    //  cerr << "New fragment generated from '" << _current_molecule->name() << "', acc " << accumulate_starting_parent_information <<'\n';
+    if (accumulate_starting_parent_information) {
       add_name_of_parent_to_starting_parent_array(smiles, _current_molecule->name(), starting_parent);
+    }
 
     return 1;                // new smiles encountered this molecule
   }
@@ -2426,6 +2443,34 @@ Dicer_Arguments::MaybeAddToHash(const IWString& smiles) {
   _fragments_found_this_molecule[s]++;
 
   return 0;          // smiles had been encountered before
+}
+
+// We are using hashed smiles as bit numbers, so a lot of the global hashes
+// do not need to be updated.
+// Note that we do a very bad thing by taking the first 32 bits of the
+// highwayhash result. That is always a bad idea, but it is expected to be
+// OK for this use.
+int
+Dicer_Arguments::MaybeAddToSmilesHash(const IWString& smiles) {
+  using highwayhash::HHKey;
+  using highwayhash::InstructionSets;
+  using highwayhash::HighwayHash;
+
+  HH_ALIGNAS(32) const HHKey key = {55, 66, 77, 88};
+  highwayhash::HHResult64 result;
+  InstructionSets::Run<HighwayHash>(key, smiles.data(), smiles.length(), &result);
+
+  // Improper treatment of hash result;
+  const uint32_t* h = reinterpret_cast<const uint32_t*>(&result);
+
+  auto iter = _fragments_found_this_molecule.find(*h);
+  if (iter == _fragments_found_this_molecule.end()) {
+    _fragments_found_this_molecule[*h] = 1;
+  } else {
+    ++iter->second;
+  }
+
+  return 1;
 }
 
 //#define DEBUG_BIT_COMPARISONS
@@ -2448,23 +2493,12 @@ Dicer_Arguments::is_unique(Molecule & m)
     b->set(*x);
   }
 
-  const int matoms = m.natoms();
-  for (int i = 0; i < matoms; i++)
-  {
-    std::optional<atom_number_t> x = InitialAtomNumber(m.atomi(i));
-    if (! x) {
-      continue;
-    }
-
-    b->set(*x);
-  }
-
 //assert (b->nset() == matoms);    if we have added environment atoms, this will not be true
 
 #ifdef DEBUG_BIT_COMPARISONS
   cerr << "Formed bit   ";
   b->printon(cerr);
-  cerr << endl;
+  cerr << '\n';
 #endif
 
   int n = _stored_bit_vectors.number_elements();
@@ -2473,7 +2507,7 @@ Dicer_Arguments::is_unique(Molecule & m)
 #ifdef DEBUG_BIT_COMPARISONS
     cerr << "Compare with ";
     _stored_bit_vectors[i]->printon(cerr);
-    cerr << " ? " << ((*b) == (*(_stored_bit_vectors[i]))) << endl;
+    cerr << " ? " << ((*b) == (*(_stored_bit_vectors[i]))) << '\n';
 #endif
 
     if ((*b) == *(_stored_bit_vectors[i])) {
@@ -2601,16 +2635,11 @@ Dicer_Arguments::produce_fingerprint(Molecule & m,
 {
   Sparse_Fingerprint_Creator sfp;
 
-  for (ff_map::const_iterator f = _fragments_found_this_molecule.begin(); f != _fragments_found_this_molecule.end(); ++f)
-  {
-    int fragment_number = (*f).first;
-    int count = (*f).second;
-
-    sfp.hit_bit(fragment_number, count);
+  for (const auto& [frag, count] : _fragments_found_this_molecule) {
+    sfp.hit_bit(frag, count);
   }
 
-  if (! function_as_filter)
-  {
+  if (! function_as_filter) {
     output << smiles_tag << m.smiles() << ">\n";
     output << identifier_tag << m.name() << ">\n";
   }
@@ -2621,8 +2650,9 @@ Dicer_Arguments::produce_fingerprint(Molecule & m,
 
   //sfp.append_daylight_ascii_form_with_counts_encoded(fingerprint_tag, buffer);
 
-  if (! function_as_filter)
+  if (! function_as_filter) {
     output << "|\n";
+  }
 
   return 1;
 }
@@ -3164,7 +3194,7 @@ Breakages::identify_ring_bonds_to_be_broken (Molecule & m)
 
     _transformations.add(tmp);
 
-    //  cerr << "Identified ring bond breakages " << not_part_of_adjacent_ring << ' ' << m.isotopically_labelled_smiles() << " ex ring " << atom_in_adjacent_ring << endl;
+    //  cerr << "Identified ring bond breakages " << not_part_of_adjacent_ring << ' ' << m.isotopically_labelled_smiles() << " ex ring " << atom_in_adjacent_ring << '\n';
 
     //  We have identified something like 0 1 2 3 4 5 0 (break bond 0-5),
     //  we now also need to get 1 0 5 4 3 2 1 (break bond 2 1)
@@ -3179,7 +3209,7 @@ Breakages::identify_ring_bonds_to_be_broken (Molecule & m)
       s.add(not_part_of_adjacent_ring[j]);
     }
     s.add(not_part_of_adjacent_ring[1]);
-    //  cerr << "From " << not_part_of_adjacent_ring << " generated " << s << endl;
+    //  cerr << "From " << not_part_of_adjacent_ring << " generated " << s << '\n';
 
     tmp = new Ring_Bond_Breakage(s, r->is_aromatic());
     tmp->set_atom_that_must_be_a_ring_atom(atom_in_adjacent_ring);
@@ -3242,36 +3272,41 @@ usage (int rc)
 #endif
 // clang-format on
 // clang-format off
-  cerr << "  -s <smarts>   smarts for cut points - breaks bond between 1st and 2nd matched atom\n";
-  cerr << "  -q <...>      query specification (alternative to -s option)\n";
-  cerr << "  -n <smarts>   smarts for bonds to NOT break\n";
-  cerr << "  -N <...>      query specification(s) for bonds to NOT break\n";
-  cerr << "  -k <number>   maximum number of bonds to simultaneously break (def 10)\n";
-  cerr << "  -X <number>   maximum number of fragments per molecule to produce\n";
-  cerr << "  -z i          ignore molecules not matching any of the queries\n";
-  cerr << "  -I <iso>      specify isotope for join points, enter '-I help' for more info\n";
-  cerr << "  -J <tag>      produce fingerprint with tag <tag>\n";
-  cerr << "  -K <fname>    READ=<fname>, WRITE=<fname> manage cross reference files bit#->smiles\n";
-  cerr << "  -m <natoms>   discard fragments with fewer than <natoms> atoms\n";
-  cerr << "  -M <natoms>   discard fragments with more than <natoms> atoms\n";
-  cerr << "  -M maxnr=<nat> discard fragments with more than <nat> non ring atoms\n";
-  cerr << "  -c            discard chirality from input molecules - also discards cis-trans bonds\n";
-  cerr << "  -C def        write smiles and complementary smiles\n";
-  cerr << "  -C auto       write smiles and complementary smiles with auto label on break points.\n";
-  cerr << "  -C iso=<n>    write smiles and complementary smiles with isotope <n> on break points.\n";
-  cerr << "  -C atype      write smiles and complementary smiles with atom type labels on break points\n";
-  cerr << "  -a            write only smallest fragments to -C ... output\n";
-  cerr << "  -T <e1=e2>    one or more element transformations\n";
-  cerr << "  -P ...        atom typing specification (used for isotopes and/or complementary smiles)\n";
-  cerr << "  -B ...        various other options, enter '-B help' for info\n";
-  cerr << "  -Z <fname>    write fully broken parent molecules to <fname>\n";
-  cerr << "  -i <type>     input specification\n";
-  cerr << "  -g ...        chemical standardisation options\n";
-  cerr << "  -E ...        standard element specifications\n";
-  cerr << "  -A ...        standard aromaticity specifications\n";
-  cerr << "  -G ...        standard smiles options\n";
-  cerr << "  -S <fname>    output file (default to stdout)\n";
-  cerr << "  -v            verbose output\n";
+  cerr << R"(Recursively break bonds in a molecule, generating all possible fragments.
+Common use might be
+dicer -k 3 -I 1 -M 16 -M maxnr=9 -c -B nbamide -B brcb -B fragstatproto -B fragstat=file.fragstat file.smi
+
+ -s <smarts>   smarts for cut points - breaks bond between 1st and 2nd matched atom.
+ -q <...>      query specification (alternative to -s option).
+ -n <smarts>   smarts for bonds to NOT break.
+ -N <...>      query specification(s) for bonds to NOT break.
+ -k <number>   maximum number of bonds to simultaneously break (def 10)
+ -X <number>   maximum number of fragments per molecule to produce
+ -z i          ignore molecules not matching any of the queries
+ -I <iso>      specify isotope for join points, enter '-I help' for more info
+ -J <tag>      produce fingerprint with tag <tag>. Add '-J hash' to produce invariant bit numbers
+ -K <fname>    READ=<fname>, WRITE=<fname> manage cross reference files bit#->smiles
+ -m <natoms>   discard fragments with fewer than <natoms> atoms
+ -M <natoms>   discard fragments with more than <natoms> atoms
+ -M maxnr=<nat> discard fragments with more than <nat> non ring atoms
+ -c            discard chirality from input molecules - also discards cis-trans bonds
+ -C def        write smiles and complementary smiles
+ -C auto       write smiles and complementary smiles with auto label on break points.
+ -C iso=<n>    write smiles and complementary smiles with isotope <n> on break points.
+ -C atype      write smiles and complementary smiles with atom type labels on break points
+ -a            write only smallest fragments to -C ... output
+ -T <e1=e2>    one or more element transformations
+ -P ...        atom typing specification (used for isotopes and/or complementary smiles)
+ -B ...        various other options, enter '-B help' for info
+ -Z <fname>    write fully broken parent molecules to <fname>
+ -i <type>     input specification
+ -g ...        chemical standardisation options
+ -E ...        standard element specifications
+ -A ...        standard aromaticity specifications
+ -G ...        standard smiles options
+ -S <fname>    output file (default to stdout)
+ -v            verbose output
+)";
 // clang-format on
 
   exit(rc);
@@ -3447,7 +3482,7 @@ mark_duplicates (Fragment_Info * frag_info,
     int ndx = fj.ndx();
 
     const IWString & smiles = *(id_to_smiles[ndx]);
-    //  cerr <<  smiles << " ndx " << ndx << endl;
+    //  cerr <<  smiles << " ndx " << ndx << '\n';
 
     Molecule * tm = new Molecule;
     tm->build_from_smiles(smiles);
@@ -3566,7 +3601,7 @@ do_eliminate_fragment_subset_relations()
 
     const IWString & smiles = *(id_to_smiles[j]);
 
-    cerr << smiles << " ndx = " << fi.ndx() << " times_hit " << fi.times_hit() << " natoms " << fi.natoms() << endl;
+    cerr << smiles << " ndx = " << fi.ndx() << " times_hit " << fi.times_hit() << " natoms " << fi.natoms() << '\n';
   }
 #endif
 
@@ -4132,7 +4167,7 @@ Breakages::do_recap(Molecule & m,
   for (int i = 0; i < nc; i++)
   {
     Molecule & ci = *(c[i]);
-//  cerr << "checking component " << ci.smiles() <<endl;
+//  cerr << "checking component " << ci.smiles() <<'\n';
 
     if (!dicer_args.OkAtomCount(ci))
       continue;
@@ -4304,7 +4339,7 @@ dump_iw_atom_type(Molecule& frag, const Molecule& comp,
                   const int parent_atoms, const int xref[], const uint32_t atypes[],
                   IWString_and_File_Descriptor & output) {
 //Molecule mcopy(comp);
-//cerr << "dump_iw_atom_type  processing " << frag.smiles() << " and comp " << mcopy.smiles() << endl;
+//cerr << "dump_iw_atom_type  processing " << frag.smiles() << " and comp " << mcopy.smiles() << '\n';
   IWString v[10];
   for (int i = 0; i < parent_atoms; ++i)
   {
@@ -4313,7 +4348,7 @@ dump_iw_atom_type(Molecule& frag, const Molecule& comp,
 
     const uint32_t atype = atypes[i];
 
-//  cerr << " i = " << i << " xref " << xref[i] << " iso " << comp.isotope(xref[i]) << " atype " << atypes[i] << endl;
+//  cerr << " i = " << i << " xref " << xref[i] << " iso " << comp.isotope(xref[i]) << " atype " << atypes[i] << '\n';
     for (int iso = comp.isotope(xref[i]); iso > 0; iso /= 10)
     {
       int breakage = iso % 10;
@@ -4340,7 +4375,7 @@ dump_iw_atom_type(Molecule& frag, const Molecule& comp,
 
     int iso = frag.isotope(j);
 
-//  cerr << " i = " << i << " atom " << j << " iso " << iso << endl;
+//  cerr << " i = " << i << " atom " << j << " iso " << iso << '\n';
 
     for (; iso > 0; iso /= 10) {
       if (count > 0)
@@ -4508,7 +4543,7 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
 
   b.set_vector(subset_specification);
 
-  //cerr << "Nset " <<b.nset() << ", natoms " << matoms <<endl;
+  //cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   //cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification, matoms) << " atoms\n";
 
 #ifdef THIS_CANNOT_HAPPEN
@@ -4516,12 +4551,12 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
   {
     cerr << "NO atoms in molecule\n";
     b.printon(cerr);
-    cerr << endl;
+    cerr << '\n';
     for (int i = 0; i < matoms; i++)
     {
       cerr << subset_specification[i];
     }
-    cerr << endl;
+    cerr << '\n';
   }
 #endif
 
@@ -4531,7 +4566,7 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
   Molecule s2;
   m.create_subset(s2, subset_specification, 0, _local_xref2);
 
-//cerr << "Subsets " << s1.smiles() << " and " << s2.smiles() << " apply_isotopes_to_complementary_fragments " << apply_isotopes_to_complementary_fragments << endl;
+//cerr << "Subsets " << s1.smiles() << " and " << s2.smiles() << " apply_isotopes_to_complementary_fragments " << apply_isotopes_to_complementary_fragments << '\n';
 
   if (apply_isotopes_to_complementary_fragments > 0) {
     _do_apply_isotopes_to_complementary_fragments(m, s1, _local_xref);
@@ -4540,7 +4575,7 @@ Dicer_Arguments::_write_fragment_and_complement (Molecule & m,
   else if (apply_isotopes_to_complementary_fragments < 0)
     _do_apply_isotopes_to_complementary_fragments(m, s1, s2);
 
-//cerr << "LINE " << __LINE__ << " have " << s1.smiles() << " and " << s2.smiles() << endl;
+//cerr << "LINE " << __LINE__ << " have " << s1.smiles() << " and " << s2.smiles() << '\n';
 
   output << s1.unique_smiles() << ' ' << m.name();
 
@@ -4589,7 +4624,7 @@ Dicer_Arguments::AppendFragmentAndComplement(Molecule& m,
 
   b.set_vector(subset_specification);
 
-  //cerr << "Nset " <<b.nset() << ", natoms " << matoms <<endl;
+  //cerr << "Nset " <<b.nset() << ", natoms " << matoms <<'\n';
   //cerr << "First has " << count_non_zero_occurrences_in_array(subset_specification, matoms) << " atoms\n";
 
   Molecule s1;
@@ -4651,7 +4686,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments (Molecule & paren
       if (xref[k] >= 0)     // is in the subset
         continue;
 
-//    cerr << "Setting isotope " << xref[i] << " to " << apply_isotopes_to_complementary_fragments << endl;
+//    cerr << "Setting isotope " << xref[i] << " to " << apply_isotopes_to_complementary_fragments << '\n';
       subset.set_isotope(xref[i], apply_isotopes_to_complementary_fragments);
       break;
     }
@@ -4731,7 +4766,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments(Molecule & parent
     }
   }
 
-//cerr << "Line " << __LINE__ << " n = " << n << endl;
+//cerr << "Line " << __LINE__ << " n = " << n << '\n';
   if (n > 1)
     return _do_apply_isotopes_to_complementary_fragments_canonical(parent, n, fragment, comp);
 
@@ -4906,7 +4941,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecul
   {
     const Atom_Rank_Atom & arai = ara[i];
 
-//  cerr << " i = " << i << " rand " << arai.canon() << endl;
+//  cerr << " i = " << i << " rand " << arai.canon() << '\n';
 
     comp.set_isotope(arai.in_comp(), i + 1);
 
@@ -4920,7 +4955,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecul
   comp.unique_smiles();    // force smiles generation
 
 #ifdef DEBUG_DO_APPLY_ISOTOPES_TO_COMPLEMENTARY_FRAGMENTS_CANONICAL
-  cerr << "_do_apply_isotopes_to_complementary_fragments_canonical:processing " << comp.unique_smiles() << endl;
+  cerr << "_do_apply_isotopes_to_complementary_fragments_canonical:processing " << comp.unique_smiles() << '\n';
 #endif
 
   const resizable_array<atom_number_t> & atom_order_in_smiles = comp.atom_order_in_smiles();
@@ -4950,7 +4985,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecul
   }
 
 #ifdef DEBUG_DO_APPLY_ISOTOPES_TO_COMPLEMENTARY_FRAGMENTS_CANONICAL
-  cerr << "in_order? " << in_order << endl;
+  cerr << "in_order? " << in_order << '\n';
 #endif
 
   if (in_order)     // great!
@@ -4971,7 +5006,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecul
 
     isotope_translation_table[iso] = ndx;
 #ifdef DEBUG_DO_APPLY_ISOTOPES_TO_COMPLEMENTARY_FRAGMENTS_CANONICAL
-    cerr << "Will translate isotope " << iso << " to " << ndx << endl;
+    cerr << "Will translate isotope " << iso << " to " << ndx << '\n';
 #endif
     ndx++;
   }
@@ -4988,7 +5023,7 @@ Dicer_Arguments::_do_apply_isotopes_to_complementary_fragments_canonical(Molecul
   }
 
 #ifdef DEBUG_DO_APPLY_ISOTOPES_TO_COMPLEMENTARY_FRAGMENTS_CANONICAL
-  cerr << " comp unique smiles " << comp.unique_smiles() << endl;
+  cerr << " comp unique smiles " << comp.unique_smiles() << '\n';
 #endif
 
   const int fmatoms = frag.natoms();
@@ -5369,7 +5404,7 @@ read_existing_hash_data(iwstring_data_source & input,
 
     if (!read_existing_hash_data_record(buffer, smiles_to_bit))
     {
-      cerr << "Invalid hash data '" << buffer << "', line " << input.lines_read() << endl;
+      cerr << "Invalid hash data '" << buffer << "', line " << input.lines_read() << '\n';
       return 0;
     }
   }
@@ -5421,7 +5456,7 @@ convert_to_atom_numbers_in_current_molecule(const Molecule & m,
       continue;
 
     atom_number_t x = *(reinterpret_cast<const atom_number_t *>(v));
-    //  cerr << "Atom " << i << " was atom " << x << endl;
+    //  cerr << "Atom " << i << " was atom " << x << '\n';
 
     if (x == a1)
     {
@@ -5465,15 +5500,15 @@ call_dicer (Molecule & m, Dicer_Arguments & dicer_args, Breakages & breakages,
             Breakages_Iterator & bi)
 {
 #ifdef DEBUG_CALL_DICER
-  cerr << "Calling dicer, depth " << dicer_args.recursion_depth() << ", molecule is '" << m.smiles() << "', can_go_deeper " << dicer_args.can_go_deeper() << endl;
-  cerr << "max_recursion_depth " << max_recursion_depth << " max recursion_depth this m " << dicer_args.max_recursion_depth_this_molecule() << endl;
+  cerr << "Calling dicer, depth " << dicer_args.recursion_depth() << ", molecule is '" << m.smiles() << "', can_go_deeper " << dicer_args.can_go_deeper() << '\n';
+  cerr << "max_recursion_depth " << max_recursion_depth << " max recursion_depth this m " << dicer_args.max_recursion_depth_this_molecule() << '\n';
 #endif
 
   if (!dicer_args.can_go_deeper())
     return 0;
 
 #ifdef DEBUG_CALL_DICER
-  cerr << "Compare " << m.natoms()  << " with " << dicer_args.lower_atom_count_cutoff() << endl;
+  cerr << "Compare " << m.natoms()  << " with " << dicer_args.lower_atom_count_cutoff() << '\n';
 #endif
 
   if (m.natoms() <= dicer_args.lower_atom_count_cutoff())         // cannot be split
@@ -5530,7 +5565,7 @@ Chain_Bond_Breakage::_process(Molecule & m0,
   set_isotopes_if_needed(m, j1, j2, dicer_args);
 
 #ifdef DEBUG_BOND_BREAKING
-  cerr << "Before breaking bond '" << m.smiles() << "', level " << dicer_args.recursion_depth() << endl;
+  cerr << "Before breaking bond '" << m.smiles() << "', level " << dicer_args.recursion_depth() << '\n';
 #endif
 
   assert (m.are_bonded(j1, j2));
@@ -5543,7 +5578,7 @@ Chain_Bond_Breakage::_process(Molecule & m0,
 
     resizable_array_p<Molecule> c;
     if (2 != m.create_components(c)) {
-      cerr << "Huh, created " << c.number_elements() << " fragments during chain bond breakage " << m.smiles() << endl;
+      cerr << "Huh, created " << c.number_elements() << " fragments during chain bond breakage " << m.smiles() << '\n';
       return 0;
     }
 
@@ -5558,14 +5593,14 @@ Chain_Bond_Breakage::_process(Molecule & m0,
 
     m.split_off_fragments(0, frags);
 
-//  cerr << "Split " << s << " into " << m.smiles() << " and " << frags.smiles() << endl;
+//  cerr << "Split " << s << " into " << m.smiles() << " and " << frags.smiles() << '\n';
 
     components.add(&m);
     components.add(&frags);
 
 //  m.unique_smiles();
 //  frags.unique_smiles();
-//  cerr << "Created " << m.unique_smiles() << " and " << frags.unique_smiles() << endl;
+//  cerr << "Created " << m.unique_smiles() << " and " << frags.unique_smiles() << '\n';
 
     _process(m0, components, m.name(), dicer_args, breakages, bi);
   }
@@ -5600,7 +5635,7 @@ Chain_Bond_Breakage::_process(Molecule& m0,
     {
       Molecule tmp(current_parent_molecule);
       tmp.add_molecule(&c);
-      //    cerr << " c contains " << c.number_fragments() << " fragments, tmp " << tmp.number_fragments() << endl;
+      //    cerr << " c contains " << c.number_fragments() << " fragments, tmp " << tmp.number_fragments() << '\n';
       stream_for_parent_joinged_to_fragment.write(tmp);
     }
 #endif
@@ -5664,9 +5699,9 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
   Molecule mcopy(m);
 
 #ifdef DEBUG_DO_RING_BREAKING
-  cerr << "Starting _do_ring_breaking with " << r << " mc = " << &mcopy << endl;
-  cerr << mcopy.isotopically_labelled_smiles() << endl;
-  cerr << "Atoms " << r << endl;
+  cerr << "Starting _do_ring_breaking with " << r << " mc = " << &mcopy << '\n';
+  cerr << mcopy.isotopically_labelled_smiles() << '\n';
+  cerr << "Atoms " << r << '\n';
 #endif
 
   int n = r.number_elements();
@@ -5687,7 +5722,7 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
   mcopy.remove_bond_between_atoms(r[n-2], r[n-1]);
 
 #ifdef DEBUG_DO_RING_BREAKING
-  cerr << "After breaking final bond in ring " << mcopy.isotopically_labelled_smiles() << endl;
+  cerr << "After breaking final bond in ring " << mcopy.isotopically_labelled_smiles() << '\n';
 #endif
 
   if (!dicer_args.is_unique(mcopy))
@@ -5696,7 +5731,7 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
   call_dicer(mcopy, dicer_args, breakages, bi);
 
 #ifdef DEBUG_DO_RING_BREAKING
-  cerr << "Begin removal loop " << mcopy.isotopically_labelled_smiles() << endl;
+  cerr << "Begin removal loop " << mcopy.isotopically_labelled_smiles() << '\n';
 #endif
 
   for (int i = n-2; i >= 1; i--)
@@ -5705,7 +5740,7 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
       break;
 
 #ifdef  DEBUG_DO_RING_BREAKING
-    cerr << "i = " << i << " Processing atom " << r[i] << " in '" << mcopy.isotopically_labelled_smiles() << endl;
+    cerr << "i = " << i << " Processing atom " << r[i] << " in '" << mcopy.isotopically_labelled_smiles() << '\n';
 #endif
 
     int need_to_look_for_fragments = (mcopy.ncon(r[i]) > 1);
@@ -5715,8 +5750,8 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
 
     //  Feb 2012, for now, just pass over these problems, but they should be prevented
     //  {
-    //    cerr << "GACK, removing aromatic atom, i = " << i << " atom " << r[i] << endl;
-    //    cerr << mcopy.isotopically_labelled_smiles() << endl;
+    //    cerr << "GACK, removing aromatic atom, i = " << i << " atom " << r[i] << '\n';
+    //    cerr << mcopy.isotopically_labelled_smiles() << '\n';
     //      iwabort();
     //   }
 
@@ -5735,7 +5770,7 @@ Ring_Bond_Breakage::_do_ring_breaking(Molecule & m,
     call_dicer(mcopy, dicer_args, breakages, bi);
 
 #ifdef DEBUG_DO_RING_BREAKING
-    cerr << "Generated " << mcopy.smiles() << endl;
+    cerr << "Generated " << mcopy.smiles() << '\n';
 #endif
 
     if (i > 1)
@@ -5826,7 +5861,7 @@ Ring_Bond_Breakage::_process(Molecule & m,
     return 0;
   }
 
-  //cerr << "RBB:Processing atoms " << r << " in " << m.isotopically_labelled_smiles() << " other ring " << xref[_atom_that_must_be_a_ring_atom] << endl;
+  //cerr << "RBB:Processing atoms " << r << " in " << m.isotopically_labelled_smiles() << " other ring " << xref[_atom_that_must_be_a_ring_atom] << '\n';
 
   if (xref[_atom_that_must_be_a_ring_atom] < 0)
     return 0;
@@ -5932,7 +5967,7 @@ Ring_Bond_Breakage::_process(Molecule & m,
   r.pop();
   r.pop();
 
-  //cerr << "Residual ring contains " << r.number_elements() << " " << r << endl;
+  //cerr << "Residual ring contains " << r.number_elements() << " " << r << '\n';
 
   if (isotope_for_join_points > 0)
   {
@@ -6034,9 +6069,9 @@ Fused_Ring_Breakage::_process(Molecule & m,
 
   if (1 == mcopy.number_fragments())
   {
-    cerr << "Fused_Ring_Breakage::molecule has just one fragment " << mcopy.isotopically_labelled_smiles() << " " << mcopy.name() << endl;
-    cerr << "Removed bonds between atoms " << a11 << " and " << a1 << " AND " << a21 << " and " << a2 << endl;
-    cerr << "Starting molecule " << m.isotopically_labelled_smiles() << endl;
+    cerr << "Fused_Ring_Breakage::molecule has just one fragment " << mcopy.isotopically_labelled_smiles() << " " << mcopy.name() << '\n';
+    cerr << "Removed bonds between atoms " << a11 << " and " << a1 << " AND " << a21 << " and " << a2 << '\n';
+    cerr << "Starting molecule " << m.isotopically_labelled_smiles() << '\n';
   }
 
   mcopy.remove_fragment_containing_atom(a11);
@@ -6053,7 +6088,7 @@ Fused_Ring_Breakage::_process(Molecule & m,
 
 #ifdef DEBUG_RING_SPLITTING
   if (mcopy.aromatic_atom_count() < initial_aromatic_atom_count - 4)
-    cerr << "Loses too much aromaticity " << mcopy.aromatic_atom_count() << " vs " << initial_aromatic_atom_count << endl;
+    cerr << "Loses too much aromaticity " << mcopy.aromatic_atom_count() << " vs " << initial_aromatic_atom_count << '\n';
 #endif
 
   if (mcopy.natoms() > dicer_args.lower_atom_count_cutoff())
@@ -6121,9 +6156,9 @@ Spiro_Ring_Breakage::_process(Molecule & m,
 
   if (1 == mcopy.number_fragments())
   {
-    cerr << "Spiro_Ring_Breakage::molecule has just one fragment " << mcopy.isotopically_labelled_smiles() << " " << mcopy.name() << endl;
-    cerr << "Removed bonds between atoms " << a11 << " and " << aCenter << " AND " << a12 << " and " << aCenter << endl;
-    cerr << "Starting molecule " << m.isotopically_labelled_smiles() << endl;
+    cerr << "Spiro_Ring_Breakage::molecule has just one fragment " << mcopy.isotopically_labelled_smiles() << " " << mcopy.name() << '\n';
+    cerr << "Removed bonds between atoms " << a11 << " and " << aCenter << " AND " << a12 << " and " << aCenter << '\n';
+    cerr << "Starting molecule " << m.isotopically_labelled_smiles() << '\n';
   }
 
   mcopy.remove_fragment_containing_atom(a11);
@@ -6211,14 +6246,14 @@ dicer(Molecule & m, Dicer_Arguments & dicer_args,
 {
 //#define DEBUG_DICER
 #ifdef DEBUG_DICER
-  cerr << "Entering dicer " << dicer_args.recursion_depth() <<  ' ' << m.smiles() << " iterator " << bi.state() << endl;
+  cerr << "Entering dicer " << dicer_args.recursion_depth() <<  ' ' << m.smiles() << " iterator " << bi.state() << '\n';
 #endif
 
   const Dicer_Transformation * dt = bi.current_transformation(breakages);
   while (nullptr != dt)
   {
 #ifdef DEBUG_DICER
-    std::cerr << "####" << dicer_args.recursion_depth() << "  --  " << bi.state() << std::endl;
+    std::cerr << "####" << dicer_args.recursion_depth() << "  --  " << bi.state() << std::'\n';
 #endif
     dicer_args.increment_recursion_depth();
     dt->process(m, dicer_args, breakages, bi);
@@ -6227,7 +6262,7 @@ dicer(Molecule & m, Dicer_Arguments & dicer_args,
   }
 
 #ifdef DEBUG_DICER
-  cerr << "Returning from dicer " << dicer_args.recursion_depth() << endl;
+  cerr << "Returning from dicer " << dicer_args.recursion_depth() << '\n';
 #endif
 
   return 1;
@@ -6441,7 +6476,7 @@ Breakages::lower_numbers_if_needed (Molecule & m,
 {
   const auto f = fard.fragments_at_recursion_depth(max_recursion_depth_this_molecule, bonds_to_break_this_molecule);
 
-  //cerr << "At recursion depth " << max_recursion_depth_this_molecule << " will create " << f << " fragments, cf max " << max_fragments_per_molecule << endl;
+  //cerr << "At recursion depth " << max_recursion_depth_this_molecule << " will create " << f << " fragments, cf max " << max_fragments_per_molecule << '\n';
 
   if (f <= max_fragments_per_molecule)        // great
     return;
@@ -6524,7 +6559,7 @@ Breakages::lower_numbers_if_needed (Molecule & m,
   // not solve our problem.
 
   max_recursion_depth_this_molecule--;
-  cerr << "Lowered bonds to be broken to " << bonds_to_break_this_molecule << " lowering recursion level to " << max_recursion_depth_this_molecule << " frags " << fard.fragments_at_recursion_depth(max_recursion_depth_this_molecule, bonds_to_break_this_molecule) << endl;
+  cerr << "Lowered bonds to be broken to " << bonds_to_break_this_molecule << " lowering recursion level to " << max_recursion_depth_this_molecule << " frags " << fard.fragments_at_recursion_depth(max_recursion_depth_this_molecule, bonds_to_break_this_molecule) << '\n';
 
   return;
 }
@@ -6541,7 +6576,7 @@ count_side_of_bond (const Molecule & m,
 
   int acon = a->ncon();
 
-  //cerr << "Continue exploring " << astart << endl;
+  //cerr << "Continue exploring " << astart << '\n';
 
   for (int i = 0; i < acon; i++)
   {
@@ -6571,7 +6606,7 @@ count_side_of_bond (const Molecule & m,
       return 0;
   }
 
-  //cerr << "From atom " << astart <<" returning " << rc <<endl;
+  //cerr << "From atom " << astart <<" returning " << rc <<'\n';
   return rc;
 }
 
@@ -6597,7 +6632,7 @@ atoms_on_side_of_bond_satisfy_min_frag_size(const Molecule & m,
 
   int c = count_side_of_bond(m, b1, encountered_ring, tmp);
 
-  //cerr << "From " << b2 << " to " << b1 << " count " << c << ", ring " << encountered_ring << endl;
+  //cerr << "From " << b2 << " to " << b1 << " count " << c << ", ring " << encountered_ring << '\n';
 
   // If there is a ring, no violation of lower_atom_count_cutoff possible
   if (encountered_ring) {
@@ -6653,7 +6688,7 @@ Breakages::discard_breakages_that_result_in_fragments_too_small(Molecule & m,
     {
       _transformations.remove_item(i);
       rc++;
-      //    cerr << "Removing breakage " << b0 << " to " << b1 << endl;
+      //    cerr << "Removing breakage " << b0 << " to " << b1 << '\n';
     }
   }
 
@@ -6782,7 +6817,7 @@ Breakages::identify_bonds_to_break_hard_coded_rules(Molecule & m)
 
 //#define ECHO_BONDS_BROKEN
 #ifdef ECHO_BONDS_BROKEN
-  cerr << m.isotopically_labelled_smiles() << ' ' << m.name() << endl;
+  cerr << m.isotopically_labelled_smiles() << ' ' << m.name() << '\n';
   debug_print(cerr);
 #endif
 
@@ -6968,7 +7003,7 @@ Breakages::identify_bonds_to_not_break(Molecule & m)
         continue;
       }
 
-//    cerr << "Processing query match " << *e << endl;
+//    cerr << "Processing query match " << *e << '\n';
 
       _remove_breakage_if_present(e->item(0), e->item(1));
       _remove_fused_ring_breakage_if_present(e->item(0), e->item(1));
@@ -7077,7 +7112,7 @@ dicer(Molecule & m,
   }
 
   preprocess(m);
-  // std::cerr << "####" << m.name() << std::endl;
+  // std::cerr << "####" << m.name() << std::'\n';
 
   if (number_by_initial_atom_number)
     do_number_by_initial_atom_number(m);
@@ -7722,7 +7757,7 @@ dicer (int argc, char ** argv)
         }
 
         if (verbose)
-          cerr << "Attachment points indicated with isotope " << isotope_for_join_points << endl;
+          cerr << "Attachment points indicated with isotope " << isotope_for_join_points << '\n';
       }
     }
 
@@ -7743,9 +7778,23 @@ dicer (int argc, char ** argv)
       cerr << "Will work like recap - single level recursion\n";
   }
 
-  if (cl.option_present('J'))
-  {
-    cl.value('J', fingerprint_tag);
+  if (cl.option_present('J')) {
+    const_IWSubstring j;
+    for (int i = 0; cl.value('J', j, i); ++i) {
+      if (j == "hash") {
+        fingerprint_uses_hashed_smiles = 1;
+        if (verbose) {
+          cerr << "Fingerprint will be a sparse fingerprint using hashed smiles\n";
+        }
+      } else {
+        fingerprint_tag = j;
+      }
+    }
+
+    if (fingerprint_tag.empty()) {
+      cerr << "Must specify a fingerprint tag\n";
+      return 1;
+    }
 
     if (! fingerprint_tag.starts_with("NC")) {
       cerr << "Dicer produces sparse fingerprints only, tag must start with 'NC', '" << fingerprint_tag << " invalid\n";
@@ -7786,7 +7835,6 @@ dicer (int argc, char ** argv)
   {
     const_IWSubstring m;
     for (int i = 0; cl.value('M', m, i); ++i) {
-      cerr << "Examining '" << m << "'\n";
       if (m.starts_with("maxnr=")) {
         m.remove_leading_chars(6);
         if (! m.numeric_value(max_non_ring_atoms) || max_non_ring_atoms < 0) {
@@ -8605,7 +8653,7 @@ dicer (int argc, char ** argv)
 
   if (collect_time_statistics)
   {
-    cerr << "Processing took between " << time_acc.minval() << " and " << time_acc.maxval() << ", ave " << time_acc.average() << endl;
+    cerr << "Processing took between " << time_acc.minval() << " and " << time_acc.maxval() << ", ave " << time_acc.average() << '\n';
   }
 
   cerr.flush();
