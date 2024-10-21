@@ -43,7 +43,11 @@
 #include "Molecule_Lib/substructure.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools_Bdb/substituent_identification.pb.h"
+#else
+#include "substituent_identification.pb.h"
+#endif
 
 #include "db_cxx.h"
 

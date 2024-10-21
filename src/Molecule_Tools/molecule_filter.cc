@@ -22,7 +22,11 @@
 #include "Molecule_Tools/nvrtspsa.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_filter.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace molecule_filter {
 

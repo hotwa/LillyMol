@@ -33,8 +33,16 @@
 
 #include "Molecule_Tools/minor_changes.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/minor_changes.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace minor_changes {
 

@@ -536,6 +536,7 @@ cc_library(
         ":reaction_cc_proto",
         "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -565,6 +566,7 @@ cc_library(
     deps = [
         ":geometric_constraints_cc_proto",
         ":iwmolecule",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -734,6 +736,7 @@ cc_test(
         ":iwmolecule",
         ":moleculeio",
         "@googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -1043,6 +1046,7 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@com_google_protobuf//:protobuf",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
@@ -1168,6 +1172,7 @@ cc_test(
     deps = [
         ":iwmolecule",
         ":moleculeio",
+        "@com_google_protobuf//:protobuf",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],

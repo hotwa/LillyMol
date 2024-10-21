@@ -16,7 +16,11 @@
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/General/feature_scaling.pb.h"
+#else
+#include "feature_scaling.pb.h"
+#endif
 #define FEATURE_SCALER_IMPLEMENTATION
 #include "Utilities/General/scaler.h"
 

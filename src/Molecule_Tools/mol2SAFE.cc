@@ -30,7 +30,11 @@
 #include "fragment_molecule.h"
 #include "highest_ring_number.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace mol2safe {
 

@@ -14,7 +14,11 @@ class Command_Line;
 #include "molecule.h"
 #include "set_of_atoms.h"
 #include "substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/standardise.pb.h"
+#else
+#include "standardise.pb.h"
+#endif
 
 namespace standardisation {
 // Transformations can be externally specified.

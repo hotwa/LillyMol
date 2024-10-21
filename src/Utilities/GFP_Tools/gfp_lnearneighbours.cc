@@ -21,7 +21,12 @@
 
 // #define FB_ENTROPY_WEIGHTED_FPS
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
+
 #include "gfp.h"
 #include "neighbour_list.h"
 #include "nndata.h"

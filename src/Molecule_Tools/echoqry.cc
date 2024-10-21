@@ -7,7 +7,11 @@
 
 #include "Molecule_Lib/rwsubstructure.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "Molecule_Lib.pb.h"
+#endif
 
 namespace echoqry {
 

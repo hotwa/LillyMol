@@ -6,7 +6,11 @@
 #include "gtest/gtest.h"
 #include "google/protobuf/text_format.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GeneExpression/gene_expression.pb.h"
+#else
+#include "gene_expression.pb.h"
+#endif
 
 #include "needle.h"
 

@@ -26,7 +26,11 @@
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/demerit.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 #include "substructure_demerits.h"
 #include "demerit.h"
 

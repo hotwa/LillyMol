@@ -12,7 +12,11 @@
 
 #include "Molecule_Lib/molecule.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/scaffolds.pb.h"
+#else
+#include "scaffolds.pb.h"
+#endif
 
 namespace scaffolds {
 

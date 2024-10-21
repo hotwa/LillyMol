@@ -22,7 +22,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace smi2linker {
 

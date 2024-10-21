@@ -28,7 +28,11 @@
 #include "Molecule_Lib/set_of_atoms.h"
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/substructure.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "substructure.pb.h"
+#endif
 #include "Molecule_Lib/target.h"
 
 using std::cerr;

@@ -35,7 +35,11 @@
 #include "Molecule_Lib/standardise.h"
 
 #include "tp_first_pass_lib.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/demerit.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 const char *prog_name;
 

@@ -13,7 +13,11 @@
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwqsort/iwqsort.h"
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 #include "Utilities/GFP_Tools/nndata.h"
 
 namespace nn2proto {

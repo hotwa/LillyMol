@@ -19,8 +19,13 @@
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/standardise.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #include "Molecule_Tools/minor_changes.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#include "minor_changes.pb.h"
+#endif
 
 namespace minor_changes {
 

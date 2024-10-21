@@ -22,7 +22,11 @@
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 namespace train_test_split {
 

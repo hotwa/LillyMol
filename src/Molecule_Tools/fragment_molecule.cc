@@ -10,7 +10,11 @@
 
 #include "fragment_molecule.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace fragment_molecule {
 

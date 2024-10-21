@@ -8,7 +8,11 @@
 #include "Molecule_Tools/nvrtspsa.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/molecule_filter.pb.h"
+#else
+#include "molecule_filter.pb.h"
+#endif
 
 namespace molecule_filter_lib {
 

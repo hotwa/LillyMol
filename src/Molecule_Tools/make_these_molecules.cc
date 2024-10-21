@@ -22,7 +22,11 @@
 #include "Molecule_Lib/output.h"
 #include "Molecule_Lib/standardise.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/make_these_molecules.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 using std::cerr;
 

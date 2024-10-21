@@ -35,7 +35,11 @@ class Atom_Typing_Specification;
 
 #include "chiral_centre.h"
 #include "set_of_atoms.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/substructure.pb.h"
+#else
+#include "substructure.pb.h"
+#endif
 
 class MDL_File_Data;
 class MDL_Atom_Data;

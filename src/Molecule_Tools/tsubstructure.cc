@@ -31,7 +31,11 @@
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/demerit.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 #include "tsubstructure_fp.h"
 

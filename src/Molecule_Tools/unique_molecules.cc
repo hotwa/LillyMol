@@ -39,7 +39,7 @@ using std::cerr;
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #else
-#include "dicer_fragments.pb.h"
+#include "Molecule_Tools.pb.h"
 #endif
 
 static int verbose = 0;

@@ -15,9 +15,13 @@
 #include "iwmtypes.h"
 #include "istream_and_type.h"
 #include "reaction_match_conditions.h"
-#include "Molecule_Lib/reaction.pb.h"
 #include "substructure.h"
 #include "toggle_kekule_form.h"
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/reaction.pb.h"
+#else
+#include "reaction.pb.h"
+#endif
 
 /*
   Names used in msi_object .rxn files

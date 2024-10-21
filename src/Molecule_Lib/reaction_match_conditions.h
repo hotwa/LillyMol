@@ -3,7 +3,11 @@
 
 #include "Foundational/iwstring/iwstring.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/reaction.pb.h"
+#else
+#include "reaction.pb.h"
+#endif
 
 /*
   We need a means of passing around what to do with the different

@@ -38,8 +38,9 @@
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/random_molecular_permutations.pb.h"
 #else
-#include "random_molecular_permutations.pb.h"
+#include "Molecule_Tools.pb.h"
 #endif
+#include "set_of_target_molecules.h"
 
 using std::cerr;
 using iwmisc::Fraction;

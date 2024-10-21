@@ -27,7 +27,11 @@
 #include "path.h"
 #include "toggle_kekule_form.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/standardise.pb.h"
+#else
+#include "standardise.pb.h"
+#endif
 
 using std::cerr;
 using std::endl;

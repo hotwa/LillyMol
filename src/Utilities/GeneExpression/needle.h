@@ -10,7 +10,11 @@
 #include "Foundational/iwaray/iwaray.h"
 #include "Foundational/iwstring/iwstring.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GeneExpression/gene_expression.pb.h"
+#else
+#include "gene_expression.pb.h"
+#endif
 
 // Set this in order to accumulate with each neighbour the
 // list of matched genes.

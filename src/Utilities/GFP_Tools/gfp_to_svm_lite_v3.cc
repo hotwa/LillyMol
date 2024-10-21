@@ -24,7 +24,11 @@
 
 #include "Utilities/GFP_Tools/bit_subset.h"
 #include "Utilities/GFP_Tools/gfp.h"
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
+#else
+#include "gfp_to_svm_lite.pb.h"
+#endif
 
 namespace gfp_to_svm_lite
 {

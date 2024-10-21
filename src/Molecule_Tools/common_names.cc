@@ -28,7 +28,11 @@
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/common_names.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 namespace common_names {
 

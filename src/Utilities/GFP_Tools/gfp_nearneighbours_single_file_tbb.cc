@@ -35,7 +35,11 @@
 #include "Utilities/GFP_Tools/gfp.h"
 #include "Utilities/GFP_Tools/sparse_collection.h"
 
+#ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/nearneighbours.pb.h"
+#else
+#include "nearneighbours.pb.h"
+#endif
 
 using std::cerr;
 

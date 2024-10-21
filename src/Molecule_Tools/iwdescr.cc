@@ -44,7 +44,11 @@
 #include "Molecule_Tools/alogp.h"
 #include "Molecule_Tools/xlogp.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/iwdescr.pb.h"
+#else
+#include "Molecule_Tools.pb.h"
+#endif
 
 using std::cerr;
 using iwmisc::Fraction;

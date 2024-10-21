@@ -1,10 +1,14 @@
 #ifndef MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
 #define MOLECULE_LIB_TOGGLE_KEKULE_FORM_H_
 
-#include "Molecule_Lib/toggle_kekule_form.pb.h"
-
 #include "bond.h"
 #include "molecule.h"
+
+#ifdef BUILD_BAZEL
+#include "Molecule_Lib/toggle_kekule_form.pb.h"
+#else
+#include "toggle_kekule_form.pb.h"
+#endif
 
 class Command_Line;
 class msi_attribute;

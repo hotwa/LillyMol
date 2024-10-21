@@ -20,7 +20,11 @@
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/molecule_to_query.h"
 #include "Molecule_Lib/mol2graph.h"
+#ifdef BUILD_BAZEL
 #include "Molecule_Lib/reaction.pb.h"
+#else
+#include "Molecule_Lib.pb.h"
+#endif
 #include "Molecule_Lib/standardise.h"
 #include "Molecule_Lib/target.h"
 

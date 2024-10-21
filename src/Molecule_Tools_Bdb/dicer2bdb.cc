@@ -21,7 +21,11 @@
 #include "Foundational/data_source/tfdatarecord.h"
 #include "Foundational/iwmisc/report_progress.h"
 
+#ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
+#else
+#include "dicer_fragments.pb.h"
+#endif
 
 namespace dicer2bdb {
 
