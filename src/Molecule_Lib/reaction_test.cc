@@ -1167,9 +1167,7 @@ sidechain {
 
   Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);
@@ -1208,9 +1206,7 @@ sidechain {
 
   Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 2);
@@ -1253,9 +1249,7 @@ sidechain {
 
   Sidechain_Match_Conditions smc;
   smc.set_ignore_symmetry_related_matches(1);
-  std::cerr << "Calling add_sidechain_reagent\n";
   ASSERT_TRUE(rxn.add_sidechain_reagent(0, sidechain, smc));
-  std::cerr << "after add_sidechain_reagent\n";
 
   resizable_array_p<Molecule> product;
   EXPECT_EQ(rxn.perform_reaction(scaffold, product), 1);

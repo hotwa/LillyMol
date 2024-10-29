@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <unordered_set>
 
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
@@ -41,6 +42,9 @@ Match_Conditions::ConstructFromProto(const P& proto) {
     _multiple_match_string = proto.multiple_match_string();
   if (proto.has_suppress_if_more_than_this_many_substructure_search_hits())
     _suppress_if_more_than_this_many_substructure_search_hits = proto.suppress_if_more_than_this_many_substructure_search_hits();
+  if (proto.has_embeddings_can_overlap()) {
+    _embeddings_can_overlap = proto.embeddings_can_overlap();
+  }
 
   return 1;
 }
@@ -775,6 +779,9 @@ Reaction_Site::InitialiseQueryConstraints(const M& match_conditions) {
     if (match_conditions.ignore_symmetry_related_matches()) {
       q->set_do_not_perceive_symmetry_equivalent_matches(1);
     }
+    if (! match_conditions.embeddings_can_overlap()) {
+      q->set_embeddings_do_not_overlap(1);
+    }
   }
 
   return 1;
@@ -1140,11 +1147,14 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   if (_match_conditions.one_embedding_per_start_atom()) {
     set_one_embedding_per_start_atom(1);
   }
+  if (! _match_conditions.embeddings_can_overlap()) {
+    set_embeddings_do_not_overlap(1);
+  }
 
   for (const auto& sidechain : proto.sidechain()) {
     std::unique_ptr<Sidechain_Reaction_Site> sc(new Sidechain_Reaction_Site);
     if (! sc->ConstructFromProto(sidechain, file_name)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid sidechain", proto);
+      return WriteError("IWReaction::ConstructFromProto:invalid sidechain", proto);
     }
     _sidechains.add(sc.release());
   }
@@ -1154,7 +1164,7 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   for (const auto& stereo_center : proto.reaction_stereo_center()) {
     std::unique_ptr<Reaction_Stereo_Centre> sc(new Reaction_Stereo_Centre);
     if (! sc->ConstructFromProto(stereo_center)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid reacton stereo center", proto);
+      return WriteError("IWReaction::ConstructFromProto:invalid reacton stereo center", proto);
     }
     _reaction_stereo_centre.add(sc.release());
   }
@@ -1185,12 +1195,16 @@ IWReaction::ConstructFromProto(const ReactionProto::Reaction& proto,
   for (const auto& cip:  proto.cip_stereo()) {
     std::unique_ptr<ReactionCipStereo> tmp = std::make_unique<ReactionCipStereo>();
     if (! tmp->ConstructFromProto(cip)) {
-      return WriteError("Reaction_Site::ConstructFromProto:invalid cip stereo center", proto);
+      return WriteError("IWReaction::ConstructFromProto:invalid cip stereo center", proto);
     }
     _cip_stereo << tmp.release();
   }
 
   _determine_has_sidechain_isotope_requirement();
+
+  if (! check_internal_consistency()) {
+    return WriteError("IWReaction::ConstructFromProto:not internally consistent", proto);
+  }
 
   return 1;
 }
@@ -1207,6 +1221,7 @@ IWReaction::_determine_has_sidechain_isotope_requirement() {
 
   return _has_sidechain_isotope_requirement;
 }
+
 
 int
 Sidechain_Reaction_Site::has_sidechain_isotope_requirement() const {

@@ -196,46 +196,51 @@ usage(int rc) {
   // clang-format on
   // clang-format off
 
-  cerr << "  -r <file>      specify single reaction file\n";
-//cerr << "  -y <file>      specify secondary reaction(s)\n";
-  cerr << "  -D <file>      specify ISIS reaction file\n";
-  cerr << "  -D rmfrag      remove small fragments from the results of ISIS reaction file reactions\n";
-  cerr << "  -D rmunmp      remove unmapped elements shown on LHS but absent on RHS\n";
-  cerr << "  -P <file>      reaction as proto file\n";
-  cerr << "  -K <smirks>    reaction as smirks. F:<fname> means smirks is in file\n";
-  cerr << "  -z i           ignore molecules not reacting\n";
-  cerr << "  -z w           write molecules not reacting\n";
-  cerr << "  -Z             ignore sidechains not reacting\n";
-  cerr << "  -C <string>    append <string> to the name of all changed molecules\n";
-  cerr << "  -C ifmult      only append the -C string in the case of multiple scaffold matches\n";
-  cerr << "  -m <number>    the maximum number of scaffold reaction sites to process\n";
-  cerr << "  -m do=number   process site number <number> in the scaffold\n";
-  cerr << "  -m each        enumerate each scaffold hit separately\n";
-  cerr << "  -m RMX         ignore scaffolds that generate multiple substructure hits\n";
-  cerr << "  -X <symbol>    extract/remove all atoms of type <symbol>. No bonds changed\n";
-  cerr << "  -I             change isotopes to natural form in product molecules\n";
-  cerr << "  -M all         generate all regio-isomers from multiple sidechain matches\n";
-  cerr << "  -M do=number   process site number <number> in the sidechains\n";
-  cerr << "  -M mskip=text  append <text> to names where just one possible sidechain attachment chosen\n";
-  cerr << "  -M write=file  write non-reacting sidechains to <file>\n";
-  cerr << "  -M RMX         ignore any sidechains with multiple substructure matches\n";
-  cerr << "  -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)\n";
-  cerr << "  -l             strip reagents to largest fragment\n";
-  cerr << "  -L             strip products to largest fragment\n";
-  cerr << "  -f             function as a TDT filter\n";
-  cerr << "  -n <xxx>       number assigner options, enter '-n help' for details\n";
-  cerr << "  -W <string>    token put between names of products (default \" + \")\n";
-  cerr << "  -u             one embedding per start atom\n";
-  cerr << "  -d             suppress duplicate molecules - only checks current molecule\n";
-  cerr << "  -k             don't perceive symmetry equivalents in the scaffold\n";
-  cerr << "  -J ...         various special purpose options, enter '-J help' for details\n";
-  cerr << "  -S <string>    create output files with name stem <string>\n";
-  cerr << "  -o <type>      specify output file type(s)\n";
-  cerr << "  -E ...         standard element options, enter '-E help' for info\n";
-  (void) display_standard_aromaticity_options(cerr);
-  (void) display_standard_chemical_standardisation_options(cerr, 'g');
-  cerr << "  -i <type>      specify input file type\n";
-  cerr << "  -v             verbose output\n";
+  cerr << R"(
+Performs reactions based on a reaction file and smiles file(s).
+Specify the reaction file with the -r (old) or -P (textproto) option.
+The number of files specified must correspond to the number of components in the reaction.
+One file for the scaffold, mandatory, and zero or more file(s) for each sidechain.
+ -r <file>      specify single reaction file
+ -D <file>      specify ISIS reaction file
+ -D rmfrag      remove small fragments from the results of ISIS reaction file reactions
+ -D rmunmp      remove unmapped elements shown on LHS but absent on RHS
+ -P <file>      reaction as proto file
+ -K <smirks>    reaction as smirks. F:<fname> means smirks is in file
+ -z i           ignore molecules not reacting
+ -z w           write molecules not reacting
+ -Z             ignore sidechains not reacting
+ -C <string>    append <string> to the name of all changed molecules
+ -C ifmult      only append the -C string in the case of multiple scaffold matches
+ -m <number>    the maximum number of scaffold reaction sites to process
+ -m do=number   process site number <number> in the scaffold
+ -m each        enumerate each scaffold hit separately
+ -m RMX         ignore scaffolds that generate multiple substructure hits
+ -X <symbol>    extract/remove all atoms of type <symbol>. No bonds changed
+ -I             change isotopes to natural form in product molecules
+ -M all         generate all regio-isomers from multiple sidechain matches
+ -M do=number   process site number <number> in the sidechains
+ -M mskip=text  append <text> to names where just one possible sidechain attachment chosen
+ -M write=file  write non-reacting sidechains to <file>
+ -M RMX         ignore any sidechains with multiple substructure matches
+ -V <fname>     product molecules with invalid valences ignored and written to <fname> (NONE means no output)
+ -l             strip reagents to largest fragment
+ -L             strip products to largest fragment
+ -f             function as a TDT filter
+ -n <xxx>       number assigner options, enter '-n help' for details
+ -W <string>    token put between names of products (default \" + \")
+ -u             one embedding per start atom
+ -d             suppress duplicate molecules - only checks current molecule
+ -k             don't perceive symmetry equivalents in the scaffold
+ -J ...         various special purpose options, enter '-J help' for details
+ -S <string>    create output files with name stem <string>
+ -o <type>      specify output file type(s)
+ -E ...         standard element options, enter '-E help' for info
+ -A ...         standard aromaticity options, enter '-A help' for info
+ -g ...         chemical standardisation options, enter '-g help' for info
+ -i <type>      specify input file type
+ -v             verbose output
+)";
   // clang-format on
 
   exit(rc);

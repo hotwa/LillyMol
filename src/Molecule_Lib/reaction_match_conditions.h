@@ -34,6 +34,8 @@ class Match_Conditions
     
     int _ignore_symmetry_related_matches;
 
+    int _embeddings_can_overlap;
+
     int _ignore_multiple_matches_involving_atoms_not_changing;
 
 //  Mar 2015. Suppress any reagent that returns multiple substructure hits
@@ -60,6 +62,13 @@ class Match_Conditions
 
     int find_unique_embeddings_only () const { return _find_unique_embeddings; }
     void set_find_unique_embeddings_only (int i) { _find_unique_embeddings = i;}
+
+    int embeddings_can_overlap() const {
+      return _embeddings_can_overlap;
+    }
+    void set_embeddings_can_overlap(int s) {
+      _embeddings_can_overlap = s;
+    }
 
     int process_hit_number () const { return _process_hit_number;}
     void set_process_hit_number (int p) { _process_hit_number = p;}

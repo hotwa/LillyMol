@@ -18,12 +18,14 @@
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwbits/fixed_bit_vector.h"
 #include "Foundational/iwmisc/misc.h"
+#include "Foundational/iwmisc/proto_support.h"
 #include "Foundational/iwqsort/iwqsort.h"
 #include "Foundational/iwstring/iwstring.h"
 #include "Foundational/iwstring/iw_stl_hash_set.h"
 
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/iwreaction.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/path.h"
 #include "Molecule_Lib/rwsubstructure.h"
@@ -35,12 +37,9 @@
 
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
-#else
-#include "Molecule_Tools.pb.h"
-#endif
-#ifdef BUILD_BAZEL
 #include "Molecule_Tools/minor_changes.pb.h"
 #else
+#include "Molecule_Tools.pb.h"
 #include "Molecule_Tools.pb.h"
 #endif
 
@@ -258,7 +257,6 @@ BivalentFragment::BuildFromSmiles(const dicer_data::DicerFragment& proto) {
 }
 
 using fixed_bit_vector::FixedBitVector;
-
 
 // A class that holds information frequently used during computations.
 class MoleculeData {
@@ -702,6 +700,9 @@ Options::AnythingSpecified() const {
   if (_config.remove_fragment().size()) { return 1;}   // 16
   if (_config.has_insert_fragments()) { return 1;}  // 23
   if (_config.has_replace_inner_fragments()) { return 1;}  // 24
+  if (_config.bivalent_fragment_size()) { return 1;} // 25
+  if (_config.has_fuse_biphenyls()) { return 1;} // 28
+  if (_config.reaction_size()) { return 1;}  // 31
 
   return 0;
 }
@@ -741,6 +742,34 @@ Options::CheckConditions() {
       (_config.max_fragment_lib_size() > 0 || _config.max_bivalent_fragment_lib_size())) {
     cerr << "Options::CheckConditions:cannot specify support level and fragment library size\n";
     return 0;
+  }
+
+  if (_config.reaction_size() > 0) {
+    IWString dirname(_config_fname);
+    dirname.truncate_at_last('/');
+
+    cerr << "config has " << _config.reaction_size() << " reactions\n";
+    for (const std::string& fname : _config.reaction()) {
+      IWString tmp(dirname);
+      tmp << '/' << fname;
+      // cerr << "Processing '" << fname << "' tmp '" << tmp << "'\n";
+      std::optional<ReactionProto::Reaction> maybe_proto = 
+          iwmisc::ReadTextProto<ReactionProto::Reaction>(tmp);
+      if (! maybe_proto) {
+        cerr << "Cannot read reaction text proto '" << fname << "'\n";
+        return 0;
+      }
+
+      std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+
+      if (! rxn->ConstructFromProto(*maybe_proto, dirname)) {
+        cerr << "Cannot build reaction from " << maybe_proto->ShortDebugString() << '\n';
+        return 0;
+      }
+      rxn->set_find_unique_embeddings_only(1);
+      rxn->set_embeddings_do_not_overlap(1);
+      _reaction << rxn.release();
+    }
   }
 
   if (AnythingSpecified()) {
@@ -946,35 +975,6 @@ Options::ReadBivalentFragment(const_IWSubstring& buffer) {
   return 1;
 }
 
-#ifdef NOT_USED_WANT_COMMENTS
-int
-Options::ReadOptions(const_IWSubstring& fname) {
-  iwstring_data_source input(fname);
-  if (! input.good()) {
-    cerr << "Options::cannot open '" << fname << "'\n";
-    return 0;
-  }
-
-  return ReadOptions(input);
-}
-
-int
-Options::ReadOptions(iwstring_data_source& input) {
-
-  // Copied from proto_support.h
-
-  using google::protobuf::io::ZeroCopyInputStream;
-  using google::protobuf::io::FileInputStream;
-  std::unique_ptr<FileInputStream> zero_copy_input(new FileInputStream(input.fd()));
-
-  if (! google::protobuf::TextFormat::Parse(zero_copy_input.get(), &_config)) {
-    cerr << "Options::ReadOptions:cannot read '" << input.fname() << "'\n";
-    return 0;
-  }
-
-  return 1;
-}
-#endif
 
 int
 Options::ReadOptions(const_IWSubstring& fname) {
@@ -987,6 +987,7 @@ Options::ReadOptions(const_IWSubstring& fname) {
   }
 
   _config = std::move(*proto);
+  _config_fname = fname;
 
   return 1;
 }
@@ -1062,7 +1063,8 @@ Options::Report(std::ostream& output) const {
     { TransformationType::kRemoveFragment, "Remove Fragment"},
     { TransformationType::kInsertFragments, "Insert Fragments"},
     { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
-    { TransformationType::kFuseBiphenyls, "Fuse biphenyls"}
+    { TransformationType::kFuseBiphenyls, "Fuse biphenyls"},
+    { TransformationType::kReaction, "Reaction"}
   };
 
 #ifdef NOT_USED_ASDASDASD
@@ -1287,6 +1289,12 @@ Options::Process(Molecule& m,
   }
   // q cerr << "FuseBiphenyls " << rc << '\n';
 
+  for (IWReaction* rxn : _reaction) {
+    rc += PerformReaction(m, molecule_data, *rxn, results);
+    if (rc > _config.max_variants()) {
+      return rc;
+    }
+  }
   // q cerr << "Options::Process:returning " << rc << '\n';
 
   return rc;
@@ -1722,8 +1730,14 @@ Options::InsertCh2(Molecule& m,
 
   static const Element* carbon = get_element_from_atomic_number(6);
 
+  m.compute_aromaticity_if_needed();
+
   for (const Bond* b : m.bond_list()) {
     if (! b->is_single_bond()) {
+      continue;
+    }
+
+    if (b->nrings()) {
       continue;
     }
 
@@ -1731,10 +1745,6 @@ Options::InsertCh2(Molecule& m,
     atom_number_t a2 = b->a2();
 
     if (! molecule_data.CanChange(a1, a2)) {
-      continue;
-    }
-
-    if (b->nrings() && m.is_aromatic(a1) && m.is_aromatic(a2)) {
       continue;
     }
 
@@ -3065,6 +3075,35 @@ Options::FuseBiphenyl(Molecule& m,
   // TODO:ianwatson finish this...
   // get the bond types, and merge across a common bond type.
   // mcopy->add_bond(
+
+  return 1;
+}
+
+int
+Options::PerformReaction(Molecule& m,
+                        MoleculeData& molecule_data,
+                        IWReaction& rxn,
+                        resizable_array_p<Molecule>& results) {
+  Substructure_Results sresults;
+  if (! rxn.substructure_search(m, sresults)) {
+    return 0;
+  }
+
+  int rc = 0;
+
+  for (const Set_of_Atoms* embedding : sresults.embeddings()) {
+    std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
+
+    if (! rxn.in_place_transformation(*mcopy, embedding)) {  // not sure it can fail.
+      continue;
+    }
+
+    if (AddToResultsIfNew(mcopy, results)) {
+      ++rc;
+    }
+  }
+
+  _acc[TransformationType::kReaction].extra(rc);
 
   return 1;
 }

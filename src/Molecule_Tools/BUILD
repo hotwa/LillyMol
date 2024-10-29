@@ -1301,6 +1301,7 @@ cc_binary(
         ":minor_changes_lib",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
     ],
 )
@@ -3071,6 +3072,7 @@ cc_library(
         "//Foundational/accumulator",
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:iwreaction",
     ],
 )
 

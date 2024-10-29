@@ -16,6 +16,7 @@
 
 #include "Molecule_Lib/atom_typing.h"
 #include "Molecule_Lib/etrans.h"
+#include "Molecule_Lib/iwreaction.h"
 #include "Molecule_Lib/molecule.h"
 #include "Molecule_Lib/standardise.h"
 
@@ -177,6 +178,9 @@ class Options {
     resizable_array_p<Fragment> _monovalent_fragment;
     resizable_array_p<BivalentFragment> _bivalent_fragment;
 
+    // Scaffold only reactions that can be applied.
+    resizable_array_p<IWReaction> _reaction;
+
     // We do not generate duplicate molecules.
     IW_STL_Hash_Set _seen;
 
@@ -187,6 +191,9 @@ class Options {
     // Optional behaviours controlled by the config proto.
     // Read from the command line via the -C option.
     minor_changes_data::MinorChangesData _config;
+    // If the config file contains reactions or queries, we might
+    // need the path name.
+    IWString _config_fname;
 
     // It can be informative to keep track of how productive
     // each of the transformations is.
@@ -215,9 +222,10 @@ class Options {
       kInsertFragments = 23,
       kReplaceInnerFragments = 24,
       kFuseBiphenyls = 28,
+      kReaction = 29,
 
       // This must be the last entry.
-      kHighest = 25,
+      kHighest = 30,
     };
 
   // private functions.
@@ -352,6 +360,10 @@ class Options {
                  atom_number_t a2,
                  atom_number_t n2,
                  resizable_array_p<Molecule>& results);
+    int PerformReaction(Molecule& m,
+                        MoleculeData& molecule_data,
+                        IWReaction& rxn,
+                        resizable_array_p<Molecule>& results);
 
   public:
     Options();

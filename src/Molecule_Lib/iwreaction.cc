@@ -611,16 +611,21 @@ check_atoms (const resizable_array<int> & atoms,
 int
 IWReaction::check_internal_consistency()
 {
-  if (! Reaction_Site::check_internal_consistency())
+  if (! Reaction_Site::check_internal_consistency()) {
     return 0;
+  }
 
-  int atoms_in_scaffold_query = max_atoms_in_query();
+  int atoms_in_scaffold_query;
+  if (_queries.empty()) {
+    atoms_in_scaffold_query = Substructure_Query::max_atoms_in_query();
+  } else {
+    atoms_in_scaffold_query = _queries[0]->max_atoms_in_query();
+  }
 
-  int ns = _sidechains.number_elements();
-  for (int i = 0; i < ns; i++)
-  {
-    if (! _sidechains[i]->check_internal_consistency(ns, atoms_in_scaffold_query, _atoms_to_be_removed, _fragments_to_be_removed))
-    {
+  const int ns = _sidechains.number_elements();
+  for (int i = 0; i < ns; i++) {
+    if (! _sidechains[i]->check_internal_consistency(ns, atoms_in_scaffold_query,
+                        _atoms_to_be_removed, _fragments_to_be_removed)) {
       cerr << "IWReaction::check_internal_consistency: sidechain " << i << " is invalid\n";
       return 0;
     }
@@ -709,6 +714,7 @@ Reaction_Site::set_embeddings_do_not_overlap(int s) {
 int
 Reaction_Site::check_internal_consistency()
 {
+  // cerr << "Reaction_Site::check_internal_consistency:nq " << _queries.size() << '\n';
   int atoms_in_query = 0;
   if (_queries.empty()) {
     atoms_in_query = Substructure_Query::max_atoms_in_query();
@@ -727,10 +733,11 @@ Reaction_Site::check_internal_consistency()
     return 1;
   }
 
-//cerr << "Query has " << atoms_in_query << " atoms in the query\n";
+  // cerr << "Query has " << atoms_in_query << " atoms in the query\n";
 
-  if (! check_bonds(_bonds_to_be_broken, atoms_in_query))
+  if (! check_bonds(_bonds_to_be_broken, atoms_in_query)) {
     return 0;
+  }
 
   if (! check_bonds(_bonds_to_be_made, atoms_in_query))
     return 0;
@@ -753,16 +760,13 @@ Reaction_Site::check_internal_consistency()
   
   n = _fragments_to_be_removed.number_elements();
 
-  if (n && _fragments_to_be_kept.number_elements())
-  {
+  if (n && _fragments_to_be_kept.number_elements()) {
     cerr << "Reaction_Site::check_internal_consistency:cannot specify both fragments to remove and fragments to keep\n";
     return 0;
   }
 
-  for (int i = 0; i < n; i++)
-  {
-    if (atom_in_list_of_bonds(_bonds_to_be_made, _fragments_to_be_removed[i]))
-    {
+  for (int i = 0; i < n; i++) {
+    if (atom_in_list_of_bonds(_bonds_to_be_made, _fragments_to_be_removed[i])) {
       cerr << "Reaction_Site::check_internal_consistency: fragment to be removed " << _fragments_to_be_removed[i] <<
               " is involved in a bond to be made\n";
       return 0;
@@ -779,8 +783,7 @@ Sidechain_Reaction_Site::_check_inter_particle_atoms(const int atoms_in_scaffold
                             const resizable_array<int> & scaffold_fragments_to_be_removed,
                             const int sidechain_atom) const
 {
-  if (scaffold_atom >= atoms_in_scaffold_query)
-  {
+  if (scaffold_atom >= atoms_in_scaffold_query) {
     cerr << "Sidechain_Reaction_Site::check_internal_consistency: invalid inter particle bond\n";
     cerr << "Scaffold query contains " << atoms_in_scaffold_query << " atoms, so " << scaffold_atom << " is invalid\n";
     return 0;
@@ -817,21 +820,22 @@ Sidechain_Reaction_Site::check_internal_consistency(const int number_sidechains,
                                 const resizable_array<int> & scaffold_atoms_to_be_removed,
                                 const resizable_array<int> & scaffold_fragments_to_be_removed)
 {
-  if (! Reaction_Site::check_internal_consistency())
+  if (! Reaction_Site::check_internal_consistency()) {
     return 0;
+  }
 
-  for (int i = 0; i < _inter_particle_bonds.number_elements(); i++)
-  {
+  for (int i = 0; i < _inter_particle_bonds.number_elements(); i++) {
     const Inter_Particle_Bond * b = _inter_particle_bonds[i];
 
     const Matched_Atom_in_Component & a1 = b->a1();
-    if (! a1.in_scaffold())
+    if (! a1.in_scaffold()) {
       continue;
+    }
 
     const Matched_Atom_in_Component & a2 = b->a2();
 
-    if (! _check_inter_particle_atoms(atoms_in_scaffold_query, a1.matched_atom(), scaffold_atoms_to_be_removed, scaffold_fragments_to_be_removed, a2.matched_atom()))
-    {
+    if (! _check_inter_particle_atoms(atoms_in_scaffold_query, a1.matched_atom(),
+                scaffold_atoms_to_be_removed, scaffold_fragments_to_be_removed, a2.matched_atom())) {
       cerr << "Sidechain_Reaction_Site:check_internal_consistency:invalid inter particle bond\n";
       return 0;
     }

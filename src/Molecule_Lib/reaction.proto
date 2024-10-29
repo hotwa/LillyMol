@@ -14,8 +14,10 @@ message ScaffoldMatchConditions {
   optional int32 process_hit_number = 3;
   optional bool one_embedding_per_start_atom = 4;
   optional bool ignore_symmetry_related_matches = 5;
-  optional string multiple_match_string = 6;
-  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 7;
+  // By default, embeddings can overlap.
+  optional bool embeddings_can_overlap = 6;
+  optional string multiple_match_string = 7;
+  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 8;
 
   optional bool enumerate_scaffold_hits_individually = 9;
   optional int32 combinatorial_expansion_of_scaffold_hits = 10;
@@ -27,8 +29,10 @@ message SidechainMatchConditions {
   optional int32 process_hit_number = 3;
   optional bool one_embedding_per_start_atom = 4;
   optional bool ignore_symmetry_related_matches = 5;
-  optional string multiple_match_string = 6;
-  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 7;
+  // By default, embeddings can overlap.
+  optional bool embeddings_can_overlap = 6;
+  optional string multiple_match_string = 7;
+  optional int32 suppress_if_more_than_this_many_substructure_search_hits = 8;
 
   optional bool make_new_reagent_for_each_hit = 9;
   optional int32 max_matches_to_find = 10;

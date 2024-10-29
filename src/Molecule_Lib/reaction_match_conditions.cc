@@ -18,6 +18,8 @@ Match_Conditions::Match_Conditions ()
   _one_embedding_per_start_atom = 0;
 
   _ignore_symmetry_related_matches = 0;
+    
+  _embeddings_can_overlap = 1;
 
   _suppress_if_more_than_this_many_substructure_search_hits = std::numeric_limits<int>::max();
 
@@ -40,6 +42,8 @@ Match_Conditions::operator= (const Match_Conditions & rhs)
   _one_embedding_per_start_atom = rhs._one_embedding_per_start_atom;
 
   _ignore_symmetry_related_matches = rhs._ignore_symmetry_related_matches;
+
+  _embeddings_can_overlap = rhs._embeddings_can_overlap;
 
   _multiple_match_string = rhs._multiple_match_string;
 

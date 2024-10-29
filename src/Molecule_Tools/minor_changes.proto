@@ -112,4 +112,7 @@ message MinorChangesData {
   // requirment and a library size.
   optional uint32 max_fragment_lib_size = 29;
   optional uint32 max_bivalent_fragment_lib_size = 30;
+
+  // Textproto reactions, involving only a scaffold that are applied.
+  repeated string reaction = 31;
 }

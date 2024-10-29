@@ -41,6 +41,7 @@ Usage(int rc) {
   cerr << " -x            remove isotopes from product molecules\n";
   cerr << " -u <support>  support level for inclusion from fragment libraries\n";
   cerr << " -M <max>      maximum number of products per starting molecule\n";
+  cerr << " -p            write the parent molecule\n";
   cerr << " -c            remove chirality\n";
   cerr << " -l            strip to largest fragment\n";
   cerr << " -g ...        chemical standardisation\n";
