@@ -17,6 +17,14 @@ using std::cerr;
 
 void
 Usage(int rc) {
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
   cerr << "Filter a set of sorted molecules based on externally specified reactions\n";
   cerr << "If the product has been seen before, the starting molecule is discarded\n";
   cerr << " -a              read all the input into a vector of Molecules (recommended)\n";
@@ -30,6 +38,7 @@ Usage(int rc) {
   cerr << " -o <sep>        output separator\n";
   cerr << " -v              verbose output\n";
   exit(rc);
+  // clang-format on
 }
 
 // When the reaction product is found, we record the Predecessor - the previously

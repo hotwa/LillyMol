@@ -221,11 +221,10 @@ class Options {
       kRemoveFragment = 16,
       kInsertFragments = 23,
       kReplaceInnerFragments = 24,
-      kFuseBiphenyls = 28,
-      kReaction = 29,
+      kReaction = 28,
 
       // This must be the last entry.
-      kHighest = 30,
+      kHighest = 29,
     };
 
   // private functions.
@@ -236,6 +235,11 @@ class Options {
     int ReadBivalentFragments(const_IWSubstring& fname);
     int ReadBivalentFragments(iwstring_data_source& input);
     int ReadFragmentsFromConfig();
+
+    int ReadFileOfReactions(const std::string& fname);
+    int ReadFileOfReactions(iwstring_data_source& input, const IWString& dirname);
+    int ReadReaction(const IWString& buffer, const IWString& dirname);
+    int ReadReactionInner(IWString& fname, const IWString& dirname);
 
     int SetupOnlyProcessQuery(const std::string& qry);
     int SetupOnlyProcessQueries();
@@ -345,21 +349,6 @@ class Options {
                               int* shortest_path,
                               const BivalentFragment& frag,
                               resizable_array_p<Molecule>& results);
-    int FuseBiphenyls(Molecule& m,
-                 MoleculeData& molecule_data,
-                 resizable_array_p<Molecule>& results);
-    int FuseBiphenyls(Molecule& m,
-                 MoleculeData& molecule_data,
-                 atom_number_t a1,
-                 atom_number_t a2,
-                 resizable_array_p<Molecule>& results);
-    int FuseBiphenyl(Molecule& m,
-                 MoleculeData& molecule_data,
-                 atom_number_t a1,
-                 atom_number_t n1,
-                 atom_number_t a2,
-                 atom_number_t n2,
-                 resizable_array_p<Molecule>& results);
     int PerformReaction(Molecule& m,
                         MoleculeData& molecule_data,
                         IWReaction& rxn,

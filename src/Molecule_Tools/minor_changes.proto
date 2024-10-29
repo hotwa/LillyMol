@@ -115,4 +115,7 @@ message MinorChangesData {
 
   // Textproto reactions, involving only a scaffold that are applied.
   repeated string reaction = 31;
+
+  // A file containing the names of multiple textproto reactions.
+  repeated string file_of_reactions = 32;
 }

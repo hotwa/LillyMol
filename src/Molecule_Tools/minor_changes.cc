@@ -1,6 +1,7 @@
 // Make minor changes to incoming molecules.
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -703,6 +704,7 @@ Options::AnythingSpecified() const {
   if (_config.bivalent_fragment_size()) { return 1;} // 25
   if (_config.has_fuse_biphenyls()) { return 1;} // 28
   if (_config.reaction_size()) { return 1;}  // 31
+  if (_config.file_of_reactions_size()) { return 1;}  // 31
 
   return 0;
 }
@@ -748,28 +750,28 @@ Options::CheckConditions() {
     IWString dirname(_config_fname);
     dirname.truncate_at_last('/');
 
-    cerr << "config has " << _config.reaction_size() << " reactions\n";
     for (const std::string& fname : _config.reaction()) {
-      IWString tmp(dirname);
-      tmp << '/' << fname;
-      // cerr << "Processing '" << fname << "' tmp '" << tmp << "'\n";
-      std::optional<ReactionProto::Reaction> maybe_proto = 
-          iwmisc::ReadTextProto<ReactionProto::Reaction>(tmp);
-      if (! maybe_proto) {
-        cerr << "Cannot read reaction text proto '" << fname << "'\n";
+      const IWString s(fname);
+      if (! ReadReaction(s, dirname)) {
+        cerr << "Cannot read reaction '" << s << " dirname '" << dirname << '\n';
         return 0;
       }
-
-      std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
-
-      if (! rxn->ConstructFromProto(*maybe_proto, dirname)) {
-        cerr << "Cannot build reaction from " << maybe_proto->ShortDebugString() << '\n';
-        return 0;
-      }
-      rxn->set_find_unique_embeddings_only(1);
-      rxn->set_embeddings_do_not_overlap(1);
-      _reaction << rxn.release();
     }
+  }
+
+  if (_config.file_of_reactions_size() > 0) {
+    IWString dirname(_config_fname);
+    dirname.truncate_at_last('/');
+    for (const std::string& fname : _config.file_of_reactions()) {
+      if (! ReadFileOfReactions(fname)) {
+        cerr << "Cannot read file of reactions '" << fname << "'\n";
+        return 0;
+      }
+    }
+  }
+
+  if (_reaction.size() > 0 && _verbose) {
+    cerr << "Read " << _reaction.size() << " reactions\n";
   }
 
   if (AnythingSpecified()) {
@@ -801,6 +803,80 @@ Options::CheckConditions() {
   _config.set_destroy_aromatic_ring_systems(true); // 14
   _config.set_swap_adjacent_atoms(true); // 15
   _config.set_insert_fragments(true); // 23
+
+  return 1;
+}
+
+int
+Options::ReadFileOfReactions(const std::string& fname) {
+  IWString s(fname);
+  if (std::optional<IWString> expanded = s.ExpandEnvironmentVariables(); expanded) {
+    s = *expanded;
+  }
+
+  iwstring_data_source input(s);
+  if (! input.good()) {
+    cerr << "Options::ReadFileOfReactions:cannot open '" << s << "'\n";
+    return 0;
+  }
+
+  s.truncate_at_last('/');
+
+  return ReadFileOfReactions(input, s);
+}
+
+int
+Options::ReadFileOfReactions(iwstring_data_source& input, const IWString& dirname) {
+  IWString buffer;
+  while (input.next_record(buffer)) {
+    if (! ReadReaction(buffer, dirname)) {
+      cerr << "Options::ReadFileOfReactions:cannot read reaction '" << buffer <<
+              " in directory '" << dirname << "'\n";
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+int
+Options::ReadReaction(const IWString& buffer, const IWString& dirname) {
+  std::filesystem::path p(std::string(buffer.data(), buffer.length()));
+  if (std::filesystem::exists(p)) {
+    return ReadReaction(buffer, dirname);
+  }
+
+  if (std::optional<IWString> expanded = buffer.ExpandEnvironmentVariables(); expanded) {
+    std::filesystem::path p(std::string(expanded->data(), expanded->length()));
+    if (std::filesystem::exists(p)) {
+      return ReadReaction(*expanded, dirname);
+    }
+  }
+
+  IWString fname(dirname);
+  fname << '/' << buffer;
+
+  return ReadReactionInner(fname, dirname);
+}
+
+int
+Options::ReadReactionInner(IWString& fname, const IWString& dirname) {
+  std::optional<ReactionProto::Reaction> maybe_proto = 
+      iwmisc::ReadTextProto<ReactionProto::Reaction>(fname);
+  if (! maybe_proto) {
+    cerr << "Cannot read reaction text proto '" << fname << "'\n";
+    return 0;
+  }
+
+  std::unique_ptr<IWReaction> rxn = std::make_unique<IWReaction>();
+
+  if (! rxn->ConstructFromProto(*maybe_proto, dirname)) {
+    cerr << "Cannot build reaction from " << maybe_proto->ShortDebugString() << '\n';
+    return 0;
+  }
+  rxn->set_find_unique_embeddings_only(1);
+  rxn->set_embeddings_do_not_overlap(1);
+  _reaction << rxn.release();
 
   return 1;
 }
@@ -1063,7 +1139,6 @@ Options::Report(std::ostream& output) const {
     { TransformationType::kRemoveFragment, "Remove Fragment"},
     { TransformationType::kInsertFragments, "Insert Fragments"},
     { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
-    { TransformationType::kFuseBiphenyls, "Fuse biphenyls"},
     { TransformationType::kReaction, "Reaction"}
   };
 
@@ -1094,7 +1169,7 @@ Options::Report(std::ostream& output) const {
     output << iter.second << ' ' << acc.n() << " btw " << acc.minval()
            << ' ' << acc.maxval() << " tot " << acc.sum();
     if (acc.n() > 0) {
-      output << " ave " << ' ' << static_cast<float>(acc.average());
+      output << " ave " << static_cast<float>(acc.average());
     }
 
     output << '\n';
@@ -1283,12 +1358,6 @@ Options::Process(Molecule& m,
   }
   // q cerr << "AddFragments " << rc << '\n';
 
-  rc += FuseBiphenyls(m, molecule_data, results);  // 2
-  if (rc > _config.max_variants()) {
-    return rc;
-  }
-  // q cerr << "FuseBiphenyls " << rc << '\n';
-
   for (IWReaction* rxn : _reaction) {
     rc += PerformReaction(m, molecule_data, *rxn, results);
     if (rc > _config.max_variants()) {
@@ -1340,7 +1409,9 @@ Options::SingleToDoubleBond(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kSingleToDoubleBond].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kSingleToDoubleBond].extra(rc);
+  }
 
   return rc;
 }
@@ -1468,7 +1539,9 @@ Options::DoubleToSingleBond(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDoubleToSingleBond].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDoubleToSingleBond].extra(rc);
+  }
 
   return rc;
 }
@@ -1541,7 +1614,9 @@ Options::ChangeCarbonToNitrogen(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeCarbonToNitrogen].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeCarbonToNitrogen].extra(rc);
+  }
 
   return rc;
 }
@@ -1592,7 +1667,9 @@ Options::ChangeCarbonToOxygen(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeCarbonToOxygen].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeCarbonToOxygen].extra(rc);
+  }
 
   return rc;
 }
@@ -1660,7 +1737,9 @@ Options::ChangeNitrogenToCarbon(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kChangeNitrogenToCarbon].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kChangeNitrogenToCarbon].extra(rc);
+  }
 
   return rc;
 }
@@ -1713,7 +1792,9 @@ Options::RemoveCh2(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kRemoveCH2].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveCH2].extra(rc);
+  }
 
   return rc;
 }
@@ -1757,7 +1838,9 @@ Options::InsertCh2(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kInsertCH2].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kInsertCH2].extra(rc);
+  }
 
   return rc;
 }
@@ -1891,7 +1974,9 @@ Options::DestroyAromaticRings(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDestroyAromaticRings].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDestroyAromaticRings].extra(rc);
+  }
 
   return rc;
 }
@@ -1951,6 +2036,7 @@ Options::DestroyAromaticRingSystems(Molecule& m,
       continue;
     }
 
+    // This has the possibility of creating undesirable N-C-N groupings.
     std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
     if (! AllInSystemBondsSingle(*mcopy, molecule_data, in_system.get())) {
       continue;
@@ -1958,7 +2044,9 @@ Options::DestroyAromaticRingSystems(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kDestroyAromaticRingSystems].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kDestroyAromaticRingSystems].extra(rc);
+  }
 
   return rc;
 }
@@ -2047,7 +2135,9 @@ Options::MakeThreeRing(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kMakeThreeMemberedRings].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kMakeThreeMemberedRings].extra(rc);
+  }
 
   return rc;
 }
@@ -2123,7 +2213,9 @@ Options::RemoveFragments(Molecule& m,
     rc += AddToResultsIfNew(mcopy, results);
   }
 
-  _acc[TransformationType::kRemoveFragment].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveFragment].extra(rc);
+  }
 
   return rc;
 }
@@ -2329,7 +2421,9 @@ Options::SwapAdjacentAtoms(Molecule& m,
     rc += SwapAdjacentAtoms(m, molecule_data, a0, a1, a2, a3, results);
   }
 
-  _acc[TransformationType::kSwapAdjacentAtoms].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kSwapAdjacentAtoms].extra(rc);
+  }
 
   return rc;
 }
@@ -2449,7 +2543,9 @@ Options::Unspiro(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kUnspiro].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kUnspiro].extra(rc);
+  }
 
   return rc;
 }
@@ -2506,7 +2602,9 @@ Options::AddFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kAddFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kAddFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2586,7 +2684,9 @@ Options::InsertBivalentFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kInsertFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kInsertFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2743,7 +2843,9 @@ Options::ReplaceInnerFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kReplaceInnerFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kReplaceInnerFragments].extra(rc);
+  }
 
   return rc;
 }
@@ -2901,11 +3003,14 @@ Options::ReplaceTerminalFragments(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kReplaceTerminalFragments].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kReplaceTerminalFragments].extra(rc);
+  }
 
   return rc;
 }
 
+#ifdef IMPLEMENTED_AS_REACTION_MUCH_EASIER
 int
 Options::FuseBiphenyls(Molecule& m,
                  MoleculeData& molecule_data,
@@ -2951,7 +3056,9 @@ Options::FuseBiphenyls(Molecule& m,
     rc += FuseBiphenyls(m, molecule_data, a1, a2, results);
   }
 
-  _acc[TransformationType::kFuseBiphenyls].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kFuseBiphenyls].extra(rc);
+  }
 
   return rc;
 }
@@ -3078,6 +3185,7 @@ Options::FuseBiphenyl(Molecule& m,
 
   return 1;
 }
+#endif
 
 int
 Options::PerformReaction(Molecule& m,
@@ -3103,7 +3211,9 @@ Options::PerformReaction(Molecule& m,
     }
   }
 
-  _acc[TransformationType::kReaction].extra(rc);
+  if (rc > 0) {
+    _acc[TransformationType::kReaction].extra(rc);
+  }
 
   return 1;
 }

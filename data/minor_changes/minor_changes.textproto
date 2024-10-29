@@ -25,7 +25,7 @@ change_carbon_to_oxygen: true
 change_nitrogen_to_carbon: true
 insert_ch2: true
 remove_ch2: true
-destroy_aromatic_rings: true
+destroy_aromatic_rings: false
 destroy_aromatic_ring_systems: true
 swap_adjacent_atoms: true
 swap_adjacent_aromatic_atoms: true
@@ -34,3 +34,8 @@ replace_inner_fragments: true
 
 max_fragment_lib_size: 100
 max_bivalent_fragment_lib_size: 200
+
+reaction: "make_ring_amide_1.rxn"
+reaction: "make_ring_amide_2.rxn"
+reaction: "fuse_biphenyl.rxn"
+file_of_reactions: "${LILLYMOL_HOME}/data/MolecularVariants/reactions"
