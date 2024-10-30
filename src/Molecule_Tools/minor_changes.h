@@ -221,6 +221,7 @@ class Options {
       kRemoveFragment = 16,
       kInsertFragments = 23,
       kReplaceInnerFragments = 24,
+      kRemoveFusedArom = 25,
       kReaction = 28,
 
       // This must be the last entry.
@@ -353,6 +354,29 @@ class Options {
                         MoleculeData& molecule_data,
                         IWReaction& rxn,
                         resizable_array_p<Molecule>& results);
+    int RemoveFusedAromatics(Molecule& m,
+                            MoleculeData& molecule_data,
+                            resizable_array_p<Molecule>& results);
+    int RemoveFusedRing(Molecule& m, MoleculeData& molecule_data,
+                         int r1number, int r2number,
+                         int* in_ring,
+                         resizable_array_p<Molecule>& results);
+    int RemoveFusedRing(Molecule& m,
+                const Ring& ring,
+                atom_number_t c1, atom_number_t c2,
+                const Set_of_Atoms& anchor,
+                Set_of_Atoms& conn,
+                resizable_array_p<Molecule>& results);
+    int RemoveFusedRing1(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic,
+                          resizable_array_p<Molecule>& results);
+    int RemoveFusedRing2(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic1, atom_number_t exocyclic2,
+                          resizable_array_p<Molecule>& results);
 
   public:
     Options();

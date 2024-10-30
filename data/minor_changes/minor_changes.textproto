@@ -35,6 +35,8 @@ replace_inner_fragments: true
 max_fragment_lib_size: 100
 max_bivalent_fragment_lib_size: 200
 
+remove_fused_aromatics: true
+
 reaction: "make_ring_amide_1.rxn"
 reaction: "make_ring_amide_2.rxn"
 reaction: "fuse_biphenyl.rxn"

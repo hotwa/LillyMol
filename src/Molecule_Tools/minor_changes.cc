@@ -703,6 +703,7 @@ Options::AnythingSpecified() const {
   if (_config.has_replace_inner_fragments()) { return 1;}  // 24
   if (_config.bivalent_fragment_size()) { return 1;} // 25
   if (_config.has_fuse_biphenyls()) { return 1;} // 28
+  if (_config.has_remove_fused_aromatics()) { return 1; } //
   if (_config.reaction_size()) { return 1;}  // 31
   if (_config.file_of_reactions_size()) { return 1;}  // 31
 
@@ -1139,6 +1140,8 @@ Options::Report(std::ostream& output) const {
     { TransformationType::kRemoveFragment, "Remove Fragment"},
     { TransformationType::kInsertFragments, "Insert Fragments"},
     { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
+    { TransformationType::kReplaceInnerFragments, "Replace Inner Fragments"},
+    { TransformationType::kRemoveFusedArom, "Remove Fused Arom"},
     { TransformationType::kReaction, "Reaction"}
   };
 
@@ -1363,6 +1366,11 @@ Options::Process(Molecule& m,
     if (rc > _config.max_variants()) {
       return rc;
     }
+  }
+
+  rc += RemoveFusedAromatics(m, molecule_data, results);
+  if (rc > _config.max_variants()) {
+    return rc;
   }
   // q cerr << "Options::Process:returning " << rc << '\n';
 
@@ -3215,7 +3223,341 @@ Options::PerformReaction(Molecule& m,
     _acc[TransformationType::kReaction].extra(rc);
   }
 
-  return 1;
+  return rc;
+}
+
+//#define DEBUG_REMOVE_FUSED_RING
+
+int
+Options::RemoveFusedAromatics(Molecule& m, MoleculeData& molecule_data,
+                              resizable_array_p<Molecule>& results) {
+  if (! _config.remove_fused_aromatics()) {
+    return 0;
+  }
+
+  const int nr = m.nrings();
+
+  if (nr < 2) {
+    return 0;
+  }
+
+  int rc = 0;
+
+  m.compute_aromaticity_if_needed();
+
+  std::unique_ptr<int[]> ring_already_done(new_int(nr));
+  const int matoms = m.natoms();
+  std::unique_ptr<int[]> tmp = std::make_unique<int[]>(matoms);
+
+  for (int i = 0; i < nr; ++i) {
+    if (ring_already_done[i]) {
+      continue;
+    }
+
+    const Ring* ri = m.ringi(i);
+
+    if (! ri->is_fused()) {
+      continue;
+    }
+
+    int system_size = 1;
+    int second_aromatic_ring_number = -1;
+
+    for (int j = i + 1; j < nr; ++j) {
+      if (ring_already_done[j]) {
+        continue;
+      }
+
+      const Ring* rj = m.ringi(j);
+
+      if (rj->fused_system_identifier() != ri->fused_system_identifier()) {
+        continue;
+      }
+
+      ring_already_done[j] = 1;
+
+      ++system_size;
+
+      if (rj->is_aromatic()) {
+        second_aromatic_ring_number = j;
+      }
+    }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+    cerr << "from ring " << i << " second_aromatic_ring_number " << second_aromatic_ring_number << " system_size " << system_size << '\n';
+#endif
+    if (system_size == 2 && second_aromatic_ring_number > 0) {
+      rc += RemoveFusedRing(m, molecule_data, i, second_aromatic_ring_number, tmp.get(), results);
+    }
+  }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing rc " << rc << '\n';
+#endif
+
+  if (rc > 0) {
+    _acc[TransformationType::kRemoveFusedArom].extra(rc);
+  }
+
+  return rc;
+}
+
+std::tuple<atom_number_t, atom_number_t>
+AtomsInCommon(const Molecule& m, const Ring& r1, const Ring& r2, int* tmp) {
+  const int matoms = m.natoms();
+
+  std::fill_n(tmp, matoms, 0);
+  r1.set_vector(tmp, 1);
+  r2.increment_vector(tmp, 1);
+
+  atom_number_t a1 = kInvalidAtomNumber;
+  atom_number_t a2 = kInvalidAtomNumber;
+
+  for (int i = 0; i < matoms; ++i) {
+    if (tmp[i] != 2) {
+      continue;
+    }
+
+    if (a1 == kInvalidAtomNumber) {
+      a1 = i;
+    } else if (a2 == kInvalidAtomNumber) {
+      a2 = i;
+    }
+  }
+
+  return std::tuple<atom_number_t, atom_number_t>{a1, a2};
+}
+
+void
+Connections(Molecule& m,
+            int rnumber,
+            int other_ring,
+            int* in_ring,
+            Set_of_Atoms& anchor,
+            Set_of_Atoms& result) {
+  std::fill_n(in_ring, m.natoms(), 0);
+  const Ring* r = m.ringi(rnumber);
+  r->set_vector(in_ring, 1);
+  m.ringi(other_ring)->set_vector(in_ring, 1);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+  for (int i = 0; i < m.natoms(); ++i) {
+    cerr << i << " in_ring " << in_ring[i] << ' ' << m.smarts_equivalent_for_atom(i) << '\n';
+  }
+#endif
+
+  for (atom_number_t a : *r) {
+    const Atom& atom = m[a];
+    for (const Bond* b : atom) {
+      const atom_number_t o = b->other(a);
+      if (in_ring[o]) {
+        continue;
+      }
+      if (b->is_double_bond() && m.ncon(o) == 1) {
+        continue;
+      }
+      anchor << a;
+      result << o;
+    }
+  }
+}
+
+// Take a fused aromatic system and remove the least substituted ring.
+// There can be only 2 substituents on the ring being removed, since they
+// will be attached to the atoms that used to be the fusion.
+int
+Options::RemoveFusedRing(Molecule& m, MoleculeData& molecule_data,
+                         int r1number, int r2number,
+                         int* in_ring,
+                         resizable_array_p<Molecule>& results) {
+  // we are going to remove the second ring, so make sure it is the least
+  // connected ring.
+  Set_of_Atoms anchor1, conn1;
+  Set_of_Atoms anchor2, conn2;
+  Connections(m, r1number, r2number, in_ring, anchor1, conn1);
+  Connections(m, r2number, r1number, in_ring, anchor2, conn2);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Connections " << conn1 << " and " << conn2 << '\n';
+#endif
+
+  const Ring* r1 = m.ringi(r1number);
+  const Ring* r2 = m.ringi(r2number);
+
+  auto [c1, c2] = AtomsInCommon(m, *r1, *r2, in_ring);
+
+  int rc = 0;
+
+  if (conn1.size() <= 2) {
+    rc += RemoveFusedRing(m, *r1, c1, c2, anchor1, conn1, results);
+  }
+
+  if (conn1.size() <= 2) {
+    rc += RemoveFusedRing(m, *r2, c1, c2, anchor2, conn2, results);
+  }
+  
+  return rc;
+}
+
+// We have unfused a pair of aromatic rings. The fused atoms were `c1` and `c2`.
+// If these both end up fully saturated, put a double bond between then.
+int
+MaybePlaceDoubleBond(Molecule& m, atom_number_t c1, atom_number_t c2) {
+  if (m.nbonds(c1) == 2 && m.nbonds(c2) == 2) {
+    m.set_bond_type_between_atoms(c1, c2, DOUBLE_BOND);
+    return 1;
+  }
+
+  return 0;
+}
+
+// Fused ring `ring` is to be removed.
+// Atoms `c1` and `c2` are the fused atoms that will be retained.
+// `conn` are exocyclic atoms that are bonded to `ring`.
+int
+Options::RemoveFusedRing(Molecule& m,
+                const Ring& ring,
+                atom_number_t c1, atom_number_t c2,
+                const Set_of_Atoms& anchor,
+                Set_of_Atoms& conn,
+                resizable_array_p<Molecule>& results) {
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Ring being removed " << ring << " fused ring atoms c1 " << c1 << " c2 " << c2 << '\n';
+  write_isotopically_labelled_smiles(m, false, cerr);
+  cerr << '\n';
+#endif
+
+  const int initial_aromatic_atom_count = m.aromatic_atom_count();
+
+  // Identify 2 atoms in `ring` that are joined to `c1` and `c2`.
+  atom_number_t jc1 = kInvalidAtomNumber;
+  for (const Bond* b : m[c1]) {
+    const atom_number_t o = b->other(c1);
+    if (o == c2) {
+      continue;
+    }
+    if (ring.contains(o)) {
+      jc1 = o;
+      break;
+    }
+  }
+
+  atom_number_t jc2 = kInvalidAtomNumber;
+  for (const Bond* b : m[c2]) {
+    const atom_number_t o = b->other(c2);
+    if (o == c1) {
+      continue;
+    }
+    if (ring.contains(o)) {
+      jc2 = o;
+      break;
+    }
+  }
+
+  // Should not happen.
+  if (jc1 == kInvalidAtomNumber || jc2 == kInvalidAtomNumber) {
+    return 0;
+  }
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "Joined atoms c1 " << c1 << " to " << jc1 << " c2 " << c2 << " to " << jc2 << '\n';
+#endif
+
+  mcopy->remove_bond_between_atoms(c1, jc1);
+  mcopy->remove_bond_between_atoms(c2, jc2);
+  for (int i = 0; i < conn.number_elements(); ++i) {
+    mcopy->remove_bond_between_atoms(anchor[i], conn[i]);
+  }
+
+  MaybePlaceDoubleBond(*mcopy, c1, c2);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "After bond removal " << mcopy->aromatic_smiles() << '\n';
+#endif
+
+  // The remaining ring must still be aromatic. We can have list either 3 or 4 atoms
+  const int mcopy_aromatic_atom_count = mcopy->aromatic_atom_count();
+  if (mcopy_aromatic_atom_count + 3 == initial_aromatic_atom_count) {
+  } else if (mcopy_aromatic_atom_count + 4 == initial_aromatic_atom_count) {
+  } else {
+    return 0;
+  }
+
+  // Unsubstituted ring.
+  if (conn.empty()) {
+    // cerr << "Unsubstituted ring " << mcopy->aromatic_smiles() << '\n';
+    mcopy->remove_fragment_containing_atom(jc1);
+    return AddToResultsIfNew(mcopy, results);
+  }
+
+  if (conn.size() == 1) {
+    return RemoveFusedRing1(mcopy, jc1, c1, c2, conn[0], results);
+  }
+
+  if (conn.size() == 2) {
+    return RemoveFusedRing2(mcopy, jc2, c1, c2, conn[0], conn[1], results);
+  }
+
+  return 0;
+}
+
+int
+Options::RemoveFusedRing1(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic,
+                          resizable_array_p<Molecule>& results) {
+  // Make a copy because we join exocyclic to both c1 and c2.
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(*m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing1 exocyclic " << exocyclic << " to_be_removed " << to_be_removed << '\n';
+  cerr << m->aromatic_smiles() << '\n';
+#endif
+
+  m->add_bond(c1, exocyclic, SINGLE_BOND);
+  m->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "1 Trying " << m->aromatic_smiles() << '\n';
+  int rc = AddToResultsIfNew(m, results);
+
+  mcopy->add_bond(c2, exocyclic, SINGLE_BOND);
+  mcopy->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "1 Trying " << mcopy->aromatic_smiles() << '\n';
+  rc += AddToResultsIfNew(mcopy, results);
+
+  return rc;
+}
+
+int
+Options::RemoveFusedRing2(std::unique_ptr<Molecule>& m,
+                          atom_number_t to_be_removed,
+                          atom_number_t c1, atom_number_t c2,
+                          atom_number_t exocyclic1, atom_number_t exocyclic2,
+                          resizable_array_p<Molecule>& results) {
+  std::unique_ptr<Molecule> mcopy = std::make_unique<Molecule>(*m);
+
+#ifdef DEBUG_REMOVE_FUSED_RING
+  cerr << "RemoveFusedRing2 c1 " << c1 << " c2 " << c2 << " to_be_removed " << to_be_removed << " exocyclic1 " << exocyclic1 << " exocyclic2 " << exocyclic2 << '\n';
+#endif
+
+  m->add_bond(c1, exocyclic1, SINGLE_BOND);
+  m->add_bond(c2, exocyclic2, SINGLE_BOND);
+  m->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "2 Trying " << m->aromatic_smiles() << '\n';
+  int rc = AddToResultsIfNew(m, results);
+
+  mcopy->add_bond(c1, exocyclic2, SINGLE_BOND);
+  mcopy->add_bond(c2, exocyclic1, SINGLE_BOND);
+  mcopy->remove_fragment_containing_atom(to_be_removed);
+  // cerr << "2 Trying " << mcopy->aromatic_smiles() << '\n';
+
+  rc += AddToResultsIfNew(mcopy, results);
+
+  return rc;
 }
 
 }  // namespace minor_changes

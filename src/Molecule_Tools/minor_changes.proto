@@ -76,6 +76,7 @@ message MinorChangesData {
 
   // Query specifications for specifying those atoms that can change.
   // For example "SMARTS:a", or "PROTO:/path/to/proto"
+  // NOte that something like "${LILLYMOL_HOME}/data/..." will be expanded.
   repeated string only_process_query = 21;
 
   // By default, adjacent aromatic atoms are not swapped.
@@ -90,7 +91,7 @@ message MinorChangesData {
   // Given a fragment with a given number of bonds between
   // the attachment points, which might be zero, identify a
   // segment of the molecule and excise what is there, and 
-  // inser the bivalent fragment
+  // insert the bivalent fragment
   optional bool replace_inner_fragments = 24;
 
   // We can specify bivalent fragments here.
@@ -104,6 +105,8 @@ message MinorChangesData {
   // that to stderr or not.
   optional bool echo_bad_valence = 27;
 
+  // Biphenyl type linkages, with adjacent [cH] atoms can be fused.
+  // Only works if the two starting rings are not fused.
   optional bool fuse_biphenyls = 28;
 
   // Some ways for limiting the number of molecules generated.
@@ -113,9 +116,14 @@ message MinorChangesData {
   optional uint32 max_fragment_lib_size = 29;
   optional uint32 max_bivalent_fragment_lib_size = 30;
 
-  // Textproto reactions, involving only a scaffold that are applied.
-  repeated string reaction = 31;
+  // A fused aromatic is split and the substituents (2 or fewer)
+  // from the removed ring are attached to the remaining ring at
+  // the join points between the rings.
+  optional bool remove_fused_aromatics = 31;
 
-  // A file containing the names of multiple textproto reactions.
-  repeated string file_of_reactions = 32;
+  // Textproto reactions, involving only a scaffold that are applied.
+  repeated string reaction = 32;
+
+  // A file containing the file names of multiple textproto reactions.
+  repeated string file_of_reactions = 33;
 }
