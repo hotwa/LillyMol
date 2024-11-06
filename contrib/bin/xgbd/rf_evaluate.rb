@@ -3,13 +3,14 @@
 # Evaluate an RF model from either smiles or a descriptor file.
 
 require 'set'
+require 'tempfile'
 require 'google/protobuf'
 
-c3tk_home = ENV['C3TK_HOME']
+c3tk_home = ENV['LILLYMOL_HOME']
 raise 'C3TK_HOME not defined' unless c3tk_home
 
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
-require "#{c3tk_home}/bin/py/pytk/xgbd/random_forest_model_pb"
+require "#{c3tk_home}contrib/bin/lib/iwcmdline"
+require "#{c3tk_home}/contrib/bin/xgbd/random_forest_model_pb"
 
 def usage
 msg = <<-END
@@ -57,27 +58,27 @@ def rf_evaluate_smiles(fname, mdir, proto, cl)
     cmd << " -j #{j}"
   end
 
-  tmpfile = File.join(ENV['TMPDIR'], "rf_evaluate_smiles_#{Process.uid}.#{Process.pid}.dat")
+  tmpfile = Tempfile.new("rf_evaluate_smiles_#{Process.uid}.#{Process.pid}.dat")
 
   descriptors.each do |d|
     cmd << " -#{d}"
   end
-  cmd << " #{fname} > #{tmpfile}"
+  cmd << " #{fname} > #{tmpfile.path}"
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
 
   system(cmd)
-  unless File.size?(tmpfile)
+  unless File.size?(tmpfile.path)
     $stderr << "#{cmd} failed\n"
     return
   end
 
-  rf_evaluate_descriptors(tmpfile, mdir, proto, cl)
+  rf_evaluate_descriptors(tmpfile.path, mdir, proto, cl)
 
-  File.unlink(tmpfile)
+  tmpfile.unlink
 end
 
 def rf_evaluate_descriptors(fname, mdir, proto, cl)
-  cmd = "rf_evaluate.sh -mdir #{mdir} #{fname}"
+  cmd = ".rf_evaluate.sh -mdir #{mdir} #{fname}"
 
   $stderr << "Executing #{cmd}\n" if cl.option_present('v')
   system(cmd)
