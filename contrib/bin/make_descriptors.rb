@@ -9,12 +9,15 @@
 require 'fileutils'
 require 'set'
 
-c3tk_home = ENV['C3TK_HOME']
+c3tk_home = ENV['LILLYMOL_HOME']
 raise 'C3TK_HOME not defined' unless c3tk_home
 
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
+# require "#{c3tk_home}/contrib/bin/lib/iwcmdline"
+require_relative 'lib/iwcmdline'
 
 def usage(descriptors)
+  descriptors['cmi'].vendor = true
+  descriptors['marvin'].vendor = true
 msg = <<-END
 Descriptor generator.
 Descriptors are specified on the command line and a Makefile describing the dependencies
@@ -30,6 +33,7 @@ END
   descriptors.each do |k, v|
     $stderr << " -#{k}"
     $stderr << "*" if v.threed
+    $stderr << " (vendor)" if v.vendor
     $stderr << "\n"
   end
 
@@ -52,6 +56,7 @@ class Descriptor
   attr_accessor :programme
   attr_accessor :extra
   attr_accessor :speed
+  attr_accessor :vendor
   def initialize(programme, threed, speed)
     # The name of this descriptor - what the user enters as a command line option.
     @name = ""
@@ -68,6 +73,8 @@ class Descriptor
     # A relative measure of speed, with smaller numbers being better.
     # In reality it is the time taken to compute 50k molecules.
     @speed = speed
+
+    @vendor = false
   end
 end
 
@@ -263,7 +270,7 @@ def main
   descriptors['pd'] = Descriptor.new('iwpathd.sh', false, 252)
   descriptors['sh'] = Descriptor.new('tshadow.sh', true, 11.9)
   descriptors['tt'] = Descriptor.new('topotorsion.sh -H 1600', false, 2.25)
-  descriptors['w'] = Descriptor.new('w.sh', false, 15.2)
+  descriptors['w'] = Descriptor.new('iwdescr.sh', false, 15.2)
 
   # Set the name field of each descriptor
   descriptors.each do |k, v|

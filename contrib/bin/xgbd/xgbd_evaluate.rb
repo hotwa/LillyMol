@@ -5,11 +5,11 @@
 require 'set'
 require 'google/protobuf'
 
-c3tk_home = ENV['C3TK_HOME']
+c3tk_home = ENV['LILLYMOL_HOME']
 raise 'C3TK_HOME not defined' unless c3tk_home
 
-require "#{c3tk_home}/bin/ruby/lib/iwcmdline"
-require "#{c3tk_home}/bin/py/pytk/xgbd/xgboost_model_pb"
+require "#{c3tk_home}/contrib/bin/lib/iwcmdline"
+require "#{c3tk_home}/contrib/bin/xgbd/xgboost_model_pb"
 
 def usage
 msg = <<-END

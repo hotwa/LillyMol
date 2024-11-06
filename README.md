@@ -1,8 +1,8 @@
 # Welcome to the Eli Lilly LillyMol implementation.
 
 ## Background
-LillyMol is a C++ library for Cheminformatics. This repo also contains a variety of useful
-command line tools that have been built with LillyMol.
+LillyMol is a set of Linux executables for Cheminformatics. These tools are built
+on a high performance C++ library for Cheminformatics.
 
 LillyMol does only a subset of Cheminformatics tasks, but tries to do those tasks
 efficiently and correctly.
@@ -90,15 +90,20 @@ it will not work with other versions. You will need to install
 pip install pybind11 absl-py protobuf
 apt install python-dev
 ```
-Note that with the default build (below) Python bindings are not built.
 
+If you wish to use the xgboost QSAR model building tools in LillyMol,
+also pip install xgboost, scikit-learn, matplotlib and pandas.
 
-Make sure that python-dev and libblas-dev are installed.
+Make sure that python-dev and libblas-dev are installed at system level.
 
 ```
 sudo apt install python-dev libblas-dev
 ```
+
 Things seem to work seamlessly in virtualenv.
+
+Note that with the default build (below) Python bindings are not built,
+but 'make all' will.
 
 # TLDR
 If you have bazelisk and gcc installed, there is a reasonable possibility that

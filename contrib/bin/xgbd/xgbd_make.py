@@ -1,5 +1,5 @@
-# Build and commit an xgboost model
-# Deliberately simplistic in approach
+# Build and save an xgboost model.
+# Deliberately simplistic in approach.
 
 import os, sys
 

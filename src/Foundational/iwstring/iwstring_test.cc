@@ -287,4 +287,16 @@ TEST(TestConst_IWSubstring, TestStartsWithIWString) {
   EXPECT_TRUE(bar.starts_with(foo));
 }
 
+TEST(TextNextWord, TestSpaces) {
+  const_IWSubstring hello_world("hello  world foo");
+  int i = 0;
+  const_IWSubstring token;
+  ASSERT_TRUE(hello_world.nextword(token, i));
+  EXPECT_EQ(token, "hello");
+  ASSERT_TRUE(hello_world.nextword(token, i));
+  EXPECT_EQ(token, "world");
+  ASSERT_TRUE(hello_world.nextword(token, i));
+  EXPECT_EQ(token, "foo");
+}
+
 }  // namespace

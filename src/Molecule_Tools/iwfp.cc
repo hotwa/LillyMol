@@ -472,8 +472,9 @@ static int
 write_header (IWString & output_buffer,
               int write_as_numbers)
 {
-  if (0 == write_as_numbers)   // no header needed
+  if (0 == write_as_numbers) {   // no header needed
     return 1;
+  }
 
   if (0 == verbose || 0 == write_as_numbers)    // don't say anything
     ;
@@ -548,26 +549,33 @@ iwfp (Molecule & m,
     fp.set_cycles_adjust_times_used(times_in_path_optimsation);
 #endif
 
-  if (! iwfp(m, fp))
+  if (! iwfp(m, fp)) {
     return 0;
+  }
 
-  if (ntest)
+  if (ntest) {
     return iwfp_tester(m, fp);
+  }
 
-  if (accumulate_statistics)
+  if (accumulate_statistics) {
     do_accumulate_statistics(fp);
+  }
 
-  if (max_hits > 0)
+  if (max_hits > 0) {
     fp.truncate_to_max_hits(max_hits);
+  }
 
-  if (! do_output(m, fp, output))
+  if (! do_output(m, fp, output)) {
     return 0;
+  }
 
-  if (write_as_numbers)
+  if (write_as_numbers) {
     return 1;
+  }
 
-  if (need_to_do_munging)
+  if (need_to_do_munging) {
     do_munging(m, output);
+  }
 
   output << "|\n";
 
@@ -1132,13 +1140,14 @@ iwfp (int argc, char ** argv)
   }
 
   if (cl.option_present('e')) {
-    if (write_non_zero_bits == 0) {
+    if (write_non_zero_bits == 0 && write_as_numbers == 0) {
       write_as_numbers = 1;
     }
     append_nset = 1;
 
-    if (verbose)
+    if (verbose) {
       cerr << "Will include the number of bits set as a descriptor\n";
+    }
   }
 
   if (write_non_zero_bits)

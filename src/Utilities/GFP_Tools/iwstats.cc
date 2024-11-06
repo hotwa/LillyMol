@@ -1870,7 +1870,10 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
     output << "Contains duplicate predicted values in column " << (predicted_column + 1)
            << ", computing best and worst Bsquared\n";
 
-    std::random_shuffle(zdata.begin(), zdata.end());  // randomise before sorting
+    static std::random_device rd;
+    static std::mt19937 rng(rd());
+
+    std::shuffle(zdata.begin(), zdata.end(), rng);  // randomise before sorting
 
     Predicted_Value_Comparitor_Best pvcb(which_predicted_set);
 
@@ -1886,7 +1889,7 @@ iwstats(unsigned int number_records, const IWString* chunk_title, int which_pred
       output << " Best Bsquared " << best_bsquared << '\n';
     }
 
-    std::random_shuffle(zdata.begin(), zdata.end());  // randomise before sorting
+    std::shuffle(zdata.begin(), zdata.end(), rng);  // randomise before sorting
 
     Predicted_Value_Comparitor_Worst pvcw(which_predicted_set);
     zdata.iwqsort(pvcw);

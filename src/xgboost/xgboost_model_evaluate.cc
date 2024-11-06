@@ -149,7 +149,7 @@ Usage() {
   // clang-format off
   cerr << R"(
 Evaluate an xgboost descriptor model that has been built with xgbd_make.
- -mdir <directory>          model directory created with xgbd_make (do this)
+ -mdir <directory>          model directory created with xgbd_make (do this).
                             undocumented -XJSON and -META options are also available - see the source code.
  -batch <n>                 do batched evaluation - default is 1000 items per batch.
  -precision <n>             number of significant digits in the output
@@ -703,7 +703,7 @@ Main(int argc, char** argv) {
   } else if (cl.option_present("XJSON") &&
              cl.option_present("META")) {
   } else {
-    cerr << "Must specity the model via either -mdir or both -XJSON -META\n";
+    cerr << "Must specity the model via the -mdir option\n";
     Usage();
   }
 

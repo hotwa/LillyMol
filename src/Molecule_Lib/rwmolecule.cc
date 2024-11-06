@@ -1273,6 +1273,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
 
   input_type = FILE_TYPE_INVALID;
 
+  // set if SDFTAG2JSON is specified.
+  int json_requested = 0;
+  // Set if there is a selection of which tag(s) to process.
+  int tag_set = 0;
+
   int i = 0;
   const_IWSubstring optval;
   while (cl.value('i', optval, i++))
@@ -1333,10 +1338,13 @@ process_input_type(const Command_Line & cl, FileType & input_type)
 
       sdfid.unhtml();
 
-      if (! mdlfos->set_sdf_identifier(sdfid))    // bad pattern
+      if (! mdlfos->set_sdf_identifier(sdfid)) {    // bad pattern
         return 0;
+      }
+      tag_set = 1;
     }
     else if (optval == "SDFTAG2JSON") {
+      json_requested = 1;
       mdlfos->set_sdf_tags_to_json(1);
     }
     else if (optval == "NAME2JSON") {
@@ -1359,6 +1367,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     else if ("allsdfid" == optval || "ALLSDFID" == optval)
     {
       mdlfos->set_fetch_all_sdf_identifiers(1);
+      tag_set = 1;
     }
     else if (optval.starts_with("gsubsdf="))
     {
@@ -1376,6 +1385,7 @@ process_input_type(const Command_Line & cl, FileType & input_type)
     else if ("firstsdftag" == optval)
     {
       mdlfos->set_take_first_tag_as_name(1);
+      tag_set = 1;
     }
     else if (optval.starts_with("RPSDFTAG="))
     {
@@ -1727,6 +1737,11 @@ process_input_type(const Command_Line & cl, FileType & input_type)
   {
     cerr << "Unrecognised input type(s)\n";
     return 0;
+  }
+
+  if (json_requested && ! tag_set) {
+    cerr << "JSON output requested, but no tags specified. All tags will be processed\n";
+    mdlfos->set_fetch_all_sdf_identifiers(1);
   }
 
   return 1;
