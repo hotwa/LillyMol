@@ -8,8 +8,8 @@ speed can be very fast, leading to very high throughput scoring.
 
 The model types included here are all molecular descriptor models
 that make use of the [make_descriptors](/docs/Molecule_Tools/make_descriptors.md)
-script to convert molecules to descriptors. This script supports a variety
-of 2D and 3D descriptor sets, all computed using LillyMol executables.
+script to convert molecules to descriptors. That script supports a variety
+of 2D and 3D descriptor sets, computed using LillyMol executables.
 
 Both building and scoring models requires molecular descriptors computed by that
 script.
@@ -22,7 +22,7 @@ The descriptor based models can offer significant advantages in terms of scoring
 speed, and sometimes their performance is comparable to an SVMFP model.
 
 These model building tools read their input data as Pandas DataFrames, so
-make sure that your python environment includes both that and xgboost.
+make sure that your python environment includes both that, scikit-learn, and xgboost.
 
 ## Required Files
 
@@ -31,8 +31,9 @@ In order to build and score a model, at least two files are needed.
 * Molecular Descriptors (x)
 * Response (y)
 
-Both files should be tabular, space separated and with a header. Use tcount
-to check that files are tabular.
+Both files should be tabular, the identifier in column 1, space
+separated and with a header.  Use tcount to check that files are
+tabular.
 
 For example and activity file might look like
 ```
@@ -55,12 +56,12 @@ descriptors.
 The first step is to build a model. A minimal model, using a quick-to-compute
 set of descriptors and taking all default XGBoost parameters, can be done via
 ```
-${LILLYMOL_HOME}/contrib/bin/make_descriptors.rb -w train.smi > train.w
+${LILLYMOL_HOME}/contrib/bin/make_descriptors.sh -w train.smi > train.w
 ${LILLYMOL_HOME}/contrib/bin/xgbd_make.sh --mdir <mdir>
                 --activity train.activity train.w
 ```
 
-Suggest adding ${LILLYMOL_HOME}/contrib/bin to your PATH.
+Suggest adding `${LILLYMOL_HOME}/contrib/bin` to your PATH.
 
 The --mdir option specifies a directory into which information needed to evaluate
 the model is stored.
@@ -91,12 +92,12 @@ Note that the building process has recorded the make_descriptors descriptor sets
 used during training and will call make_descriptors in order to score the
 test set.
 
-Note too that here the underlying script is ruby, which calls a LillyMol
+Note too that the underlying evaluation script is ruby, which calls a LillyMol
 C++ executable for scoring.
 
 One slightly unfortunate usability feature is that xgbd_make is a python script
 that uses absl for argument parsing, so -- type options are recognised. The
-evaluation tool is ruby, and recognised - type options. So building is done with
+evaluation tool is ruby, and recognises - type options. So building is done with
 `--mdir` and scoring via `-mdir`.
 
 Scoring is typically fast since it is via a C++ interface to xgboost, scoring
@@ -108,7 +109,8 @@ generate_smiles ... | xgbd_evaluate.sh -mdir MODEL -smi -
 
 although this only works well for a single descriptor computation. There are
 options in some tools to allow pipelined evaluation which does enable
-fully pipelined scoring of arbitrarily large sets of molecules.
+fully pipelined scoring of arbitrarily large sets of molecules with multiple
+descriptors.
 
 Model performance can be evaluated via
 ```
@@ -132,3 +134,13 @@ Given the framework established with XGBoost and Random Forest models, it
 is relatively straightforward to enable other model building algorithms.
 Having a consistent interface makes integration with distributed evaluation
 and processing straightforward.
+
+## PostProcessing
+Model outputs are often subject to filtering, often via a threshold. While
+the evaluation scripts do not have built-in filtering capabilities, that
+can be achieved by measures like
+
+```
+xgbd_evaluate.sh -mdir MODEL test.smi | dfilefilter -e 'response>2.0' - > passed.txt
+```
+

@@ -3,7 +3,7 @@
 This is a a descriptor generation tool that computes a variety of
 molecular descriptors, using LillyMol tools.
 
-[!NOTE]
+> [!NOTE]
 > Computation of 3D descriptors requires Corina in order to generate
 > 3D structures from smiles. If you do not have corina, just omit
 > all 3D descriptors. 
@@ -32,8 +32,8 @@ are recognised (* means 3D)
  -dbf*
  -estate
  -ghose
- -ha     ** not yet working in LillyMol
- -hb     ** not yet working in LillyMol
+ -ha 
+ -hb
  -hpo
  -jurs*
  -jwc
