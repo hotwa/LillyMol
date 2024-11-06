@@ -49,7 +49,7 @@ are recognised (* means 3D)
  -tt
 ```
 Again, note that descriptor sets marked with an asterisk are 3D descriptors which
-depend on the tool (rcorina)[../../src/Vendor/rcorina.cc] which depends on a shared
+depend on the tool (rcorina)[/src/Vendor/rcorina.cc] which depends on a shared
 library from Corina, which must be separately licensed. If you do not have a Corina
 license, just avoid all 3D descriptors.
 
@@ -77,7 +77,7 @@ echo the commands issued to stdout.
 ## Descrioptors
 ### abr
 These are Abraham descriptors related to solubility and related effects
-[abraham.cc](src/Molecule_Tools/abraham.cc). These are often some of the most
+[abraham.cc](/src/Molecule_Tools/abraham.cc). These are often some of the most
 beneficial descriptors to include. There are only 8 descriptors and they are
 fast to compute.
 
@@ -98,11 +98,11 @@ Fingerprint BioByte's clogp calculation. Reuquires a BioByte license.
 Distance between pharmacaphore features. Donors, acceptors and charged
 atoms are defined and distances between pharmacaphore types are generated.
 Also computes 2D values.
-[estate](src/Molecule_Tools/dbf.cc)
+[estate](/src/Molecule_Tools/dbf.cc)
 
 ### estate
 E-State descriptors.
-[estate](src/Molecule_Tools/jwestate.cc)
+[estate](/src/Molecule_Tools/jwestate.cc)
 
 ### ghose
 The queries used in a Ghose Crippen logP estimation used as features.
@@ -115,44 +115,44 @@ Patterns of Hydrogen bonding features.
 
 ### hpo
 Patterns of likely hydrophobic sections of a molecule.
-[hpo](src/Molecule_Tools/hydrophobic_sections.cc)
+[hpo](/src/Molecule_Tools/hydrophobic_sections.cc)
 
 ### jurs 3D
 Surface area related features from Peter Jurs
-[jwsa](src/Molecule_Tools/jw_sa_db_descriptor.cc)
+[jwsa](/src/Molecule_Tools/jw_sa_db_descriptor.cc)
 
 ### jwc
-CATS features [jwcats](src/Molecule_Tools/jwcats.cc)
+CATS features [jwcats](/src/Molecule_Tools/jwcats.cc)
 
 ### jwdist 3D
 Distribution of features along the longest spatial axis.
-[maccskeys](src/Molecule_Tools/jw_distribution_along_longest_axis.cc).
+[maccskeys](/src/Molecule_Tools/jw_distribution_along_longest_axis.cc).
 
 ### jwdp 3D
 
 ### jwmc
 Molecular connectivity indices.
-[maccskeys](src/Molecule_Tools/jw_molconn.cc).
+[maccskeys](/src/Molecule_Tools/jw_molconn.cc).
 
 ### marvin (vendor)
 Post process the output of cxcalc logP and logD.
 
 ### medv
-MEDV descriptors [jwmedv](src/Molecule_Tools/jw_MEDV.cc)
+MEDV descriptors [jwmedv](/src/Molecule_Tools/jw_MEDV.cc)
 
 ### mk
 A variant on the original MACCS keys (192 features).
-[maccskeys](src/Molecule_Tools/maccskeys_fn5.cc).
+[maccskeys](/src/Molecule_Tools/maccskeys_fn5.cc).
 
 ### morse 3D
 
 ### pd
 An expensive T-shaped fingerprint. Needs to be reimplemented.
-[tshadow](src/Molecule_Tools/iwpathd.cc).
+[tshadow](/src/Molecule_Tools/iwpathd.cc).
 
 ### sh 3D
 Shadow descriptors. Aligns and projects the molecule along axes.
-[tshadow](src/Molecule_Tools/tshadow.cc).
+[tshadow](/src/Molecule_Tools/tshadow.cc).
 
 ### tt
 Topological Torsion derived features.
