@@ -3,12 +3,12 @@ LillyMol comes with some QSAR model building functionality.
 
 Currently two model types are available in easy to use forms. Since
 model scoring is via command line tools, scalability across cluster
-or parallel computing environments is straightforward. Model evaluation
-speed can be very fast.
+and parallel computing environments is straightforward. Model evaluation
+speed can be very fast, leading to very high throughput scoring.
 
 The model types included here are all molecular descriptor models
-that make use of the [make_descriptors](../../Molecule_Tools/make_descriptors.md)
-script to convert molecules to descriptor forms. This script supports a variety
+that make use of the [make_descriptors](/docs/Molecule_Tools/make_descriptors.md)
+script to convert molecules to descriptors. This script supports a variety
 of 2D and 3D descriptor sets, all computed using LillyMol executables.
 
 Both building and scoring models requires molecular descriptors computed by that
