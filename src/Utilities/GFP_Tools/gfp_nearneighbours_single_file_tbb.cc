@@ -1372,6 +1372,7 @@ usage(int rc)
   cerr << " -s <number>      specify max pool size\n";
   cerr << " -n <number>      specify how many neighbours to find\n";
   cerr << " -T <dis>         discard distances longer than <dis>\n";
+  cerr << " -h <nworkers>    number of worker threads\n";
   cerr << " -z               don't write molecules with no neighbours\n";
   cerr << " -I <tag>         specify identifier dataitem (default '" << identifier_tag << ")\n";
   cerr << " -A <TAG>         write average neighbour distance to <TAG>\n";
@@ -1407,7 +1408,7 @@ do_write_histogram(std::ostream& os)
 static int
 nearneighbours(int argc, char** argv)
 {
-  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:uS:");
+  Command_Line cl(argc, argv, "vs:n:I:T:t:P:F:W:Q:A:zoxH:N:bypj:C:uS:h:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -1429,6 +1430,16 @@ nearneighbours(int argc, char** argv)
   if (!iw_little_endian()) {
     cerr << "Sorry, this programme only works on little endian machines, contact Ian\n";
     return 1;
+  }
+
+  if (cl.option_present('h')) {
+    if (! cl.value('h', nworkers) || nworkers < 1 || nworkers > 8) {
+      cerr << "The number of workers (-h) must be one of 1, 2, 3, 4, 6, 8\n";
+      return 1;
+    }
+    if (verbose) {
+      cerr << "Will be processed with " << nworkers << " worker threads\n";
+    }
   }
 
 // #define DEBUG_ENCODING_STUFF
