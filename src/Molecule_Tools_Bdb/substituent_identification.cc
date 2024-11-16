@@ -12,6 +12,7 @@
 */
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -21,7 +22,6 @@
 #include "absl/strings/string_view.h"
 #include "google/protobuf/text_format.h"
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
-
 
 #define IWQSORT_IMPLEMENTATION 1
 #define IWQSORT_FO_IMPLEMENTATION 1
@@ -346,11 +346,19 @@ static char _inter_molecule_name_separator = '.';
 class ASubstituent {
  private:
   IWString _first_molecule;
-  int _number_instances;
+  uint32_t _number_instances;
+
+  // If we are concatenating the names of the examplars, we can limit the number
+  // of names concatenated. Otherwise the database can get too large.
+  static uint32_t _max_instances;
 
  public:
   ASubstituent(const IWString& s) : _first_molecule(s) {
     _number_instances = 1;
+  }
+
+  void SetMaxInstancesToConcatenate(uint32_t s) {
+    _max_instances = s;
   }
 
   void
@@ -370,13 +378,33 @@ class ASubstituent {
     _first_molecule = s;
   }
 
-  int
+  uint32_t
   number_instances() const {
     return _number_instances;
   }
 
   void write_first_and_instances(IWString&) const;
 };
+
+uint32_t ASubstituent::_max_instances = 0;
+
+int
+SetMaxInstancesToConcatenate(const const_IWSubstring& buffer, int verbose) {
+  static ASubstituent asubstituent("NOTUSED");
+
+  uint32_t s;
+  if (! buffer.numeric_value(s)) {
+    cerr << "SetMaxInstancesToConcatenate:the max number of instances to concatenate must be a whole +ve number\n";
+    return 0;
+  }
+
+  asubstituent.SetMaxInstancesToConcatenate(s);
+  if (verbose) {
+    cerr << "Will store a max of " << s << " examplars in concatenated names\n";
+  }
+
+  return 1;
+}
 
 /*
 this causes all kinds of problems generating ambiguous name re4solutions
@@ -400,8 +428,12 @@ ASubstituent::write_first_and_instances(IWString& s) const {
 
 void
 ASubstituent::extra(const IWString& mname) {
-  _first_molecule << _inter_molecule_name_separator << mname;
   _number_instances++;
+  if (_max_instances > 0 && _number_instances > _max_instances) {
+    return;
+  }
+
+  _first_molecule << _inter_molecule_name_separator << mname;
 
   return;
 }
@@ -468,6 +500,9 @@ class SubstituentIdentification {
 
   // We can optionally store serialized protos.
   int _store_protos;
+
+  // We can optionally write as textproto.
+  IWString_and_File_Descriptor _stream_for_textproto;
 
   int _shell_radius;
 
@@ -555,6 +590,8 @@ class SubstituentIdentification {
   void _default_values();
   void _usage(int rc);
   void _preprocess(Molecule& m);
+
+  int SetupTextProtoStream(const const_IWSubstring fname);
 
   int _ok_atom_count(const int matoms) const;
   int OkSubstituentSize(const std::string& smiles, int& natoms) const;
@@ -747,6 +784,9 @@ class SubstituentIdentification {
                 const struct DBKey& rad_and_bit,
                 const IWString& smiles_of_fragment_lost,
                 IWString_and_File_Descriptor& output) const;
+  int WriteTextProto(const struct DBKey& dbkey,
+               const substituent_identification::Replacements& proto,
+               IWString_and_File_Descriptor & output);
 
  public:
   SubstituentIdentification();
@@ -828,7 +868,7 @@ SubstituentIdentification::_default_values() {
   _dbs = nullptr;
   _ndb = 0;
 
-  _store_protos = 0;
+  _store_protos = 1;
 
   _output_is_textproto = 0;
   _prepend_smiles_to_textproto = 0;
@@ -874,7 +914,7 @@ substituents that have been found in the same context.
  -M <natoms>   max number of atoms in a substituent
  -B            flag to enable building
  -w <natoms>   during building, min number of atoms left after removing substituent
- -e            during building, concatenate names of all example molecules (not recommended - too large)
+ -e <max>      during building, concatenate as many as <max> names of exemplar molecules (generate large db)
  -h            during building, discern Hydrogen as a substituent
 
  -q <query>    during addition, query  describing anchor atoms needing new substituents
@@ -1025,6 +1065,7 @@ SubstituentIdentification::_write_substituents_associated_with_bit(
     return StoreProto(dbkey, u);
   }
 
+#ifdef OLD_FORMAT_DB_CONTENTS
   IWString to_store(32768);
 
   for (auto i = u.cbegin(); i != u.cend(); ++i) {
@@ -1053,6 +1094,7 @@ SubstituentIdentification::_write_substituents_associated_with_bit(
   }
 
   _keys_stored++;
+#endif
 
   return 1;
 }
@@ -1078,6 +1120,29 @@ struct SmiSubstituentComparitor {
     return 1;
   }
 };
+
+int
+SubstituentIdentification::WriteTextProto(const struct DBKey& dbkey,
+               const substituent_identification::Replacements& proto,
+               IWString_and_File_Descriptor & output) {
+  static google::protobuf::TextFormat::Printer printer;
+  printer.SetSingleLineMode(true);
+
+  static constexpr char kSep = ' ';
+  output << dbkey.radius << kSep << dbkey.b << kSep;
+
+  std::string buffer;
+  if (! printer.PrintToString(proto, &buffer)) {
+    cerr << "WriteTextProto:cannot write '" << proto.ShortDebugString() << "'\n";
+    return 0;
+  }
+
+  output << buffer;
+  output << '\n';
+  output.write_if_buffer_holds_more_than(8192);
+
+  return 1;
+}
 
 int
 SubstituentIdentification::StoreProto(
@@ -1121,6 +1186,10 @@ SubstituentIdentification::StoreProto(
   }
 
   ++_keys_stored;
+
+  if (_stream_for_textproto.active()) {
+    WriteTextProto(dbkey, proto, _stream_for_textproto);
+  }
 
   return 1;
 }
@@ -1373,16 +1442,15 @@ SubstituentIdentification::_try_bond_breaking_across(
 int
 SubstituentIdentification::_matched_pairs_qsar(Molecule& m,
                                                IWString_and_File_Descriptor& output) {
-  const auto matoms = m.natoms();
+  const int matoms = m.natoms();
 
   // cerr << "Looking for new substituents to " << m.smiles() << '\n';
 
-  int* numbers = new int[matoms];
-  std::unique_ptr<int[]> free_numbers(numbers);
+  std::unique_ptr<int[]> numbers = std::make_unique<int[]>(matoms);
 
   Molecule_Specific_Temporary_Arrays msta(matoms);
 
-  _initialise_msta(m, numbers, msta);
+  _initialise_msta(m, numbers.get(), msta);
 
   int queries_hitting_this_molecule = 0;
 
@@ -1405,9 +1473,9 @@ SubstituentIdentification::_matched_pairs_qsar(Molecule& m,
       queries_hitting_this_molecule++;
     }
 
-    int* process_these_pairs = new int[matoms + matoms];
-    std::unique_ptr<int[]> free_process_these_pairs(process_these_pairs);
-    const auto nb = _identify_non_ring_single_bonds(m, process_these_pairs);
+    std::unique_ptr<int[]> process_these_pairs = std::make_unique<int[]>(matoms + matoms);
+
+    const auto nb = _identify_non_ring_single_bonds(m, process_these_pairs.get());
     if (nb > 0) {
       queries_hitting_this_molecule++;
 
@@ -1493,12 +1561,11 @@ SubstituentIdentification::_look_for_new_substituents(Molecule& m,
 
   // cerr << "Looking for new substituents to " << m.smiles() << '\n';
 
-  int* numbers = new int[matoms];
-  std::unique_ptr<int[]> free_numbers(numbers);
+  std::unique_ptr<int[]> numbers = std::make_unique<int[]>(matoms);
 
   Molecule_Specific_Temporary_Arrays msta(matoms);
 
-  _initialise_msta(m, numbers, msta);
+  _initialise_msta(m, numbers.get(), msta);
 
   int queries_hitting_this_molecule = 0;
 
@@ -1527,9 +1594,9 @@ SubstituentIdentification::_look_for_new_substituents(Molecule& m,
       return 1;
     }
 
-    int* process_these_pairs = new int[matoms + matoms];
-    std::unique_ptr<int[]> free_process_these_pairs(process_these_pairs);
-    const auto nb = _identify_non_ring_single_bonds(m, process_these_pairs);
+    std::unique_ptr<int[]> process_these_pairs = std::make_unique<int[]>(matoms + matoms);
+
+    const auto nb = _identify_non_ring_single_bonds(m, process_these_pairs.get());
     if (nb > 0) {
       queries_hitting_this_molecule++;
 
@@ -1567,17 +1634,16 @@ SubstituentIdentification::_look_for_new_substituents(Molecule& m,
 
       if (_break_molecule_at_first_two_matched_atoms) {
         for (const Set_of_Atoms* e : sresults.embeddings()) {
-          Molecule mcopy(m);
+          cerr << "Matched atoms " << *e << '\n';
 
           if (e->number_elements() < 2) {  // should never happen
             continue;
           }
 
+          Molecule mcopy(m);
           const atom_number_t attachment_point = _do_break_across_first_two_matched_atoms(
               mcopy, e->item(0), e->item(1), msta, lookup_data.smiles_of_fragment_lost());
-          //        cerr << m.name() << ' ' << j << " atoms " << e->item(0) << "
-          //        and " << e->item(1) << " attachment_point " <<
-          //        attachment_point << '\n';
+          cerr << m.name() << ' ' << " atoms " << e->item(0) << " and " << e->item(1) << " attachment_point " << attachment_point << '\n';
           if (kInvalidAtomNumber == attachment_point) {
             continue;
           }
@@ -1643,12 +1709,11 @@ SubstituentIdentification::_look_for_new_substituents(
     Molecule& m, atom_number_t zatom, const IWString& smiles_of_fragment_lost,
     IW_STL_Hash_Set& smiles_already_found, Molecule_Specific_Temporary_Arrays& msta,
     IWString_and_File_Descriptor& output) {
-  uint32_t* b = new uint32_t[_shell_radius + 1];
-  std::unique_ptr<uint32_t[]> free_b(b);
+  std::unique_ptr<uint32_t[]> b = std::make_unique<uint32_t[]>(_shell_radius + 1);
 
-  auto max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b, msta);
+  auto max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b.get(), msta);
 
-// #define ECHO_BITS_FORMED
+#define ECHO_BITS_FORMED
 #ifdef ECHO_BITS_FORMED
   cerr << "Looking for additions to " << m.smiles() << " atom " << zatom << ' '
        << m.smarts_equivalent_for_atom(zatom) << " bits";
@@ -1660,7 +1725,9 @@ SubstituentIdentification::_look_for_new_substituents(
 
   uint32_t new_molecules_produced = 0;
 
+  cerr << "Radii " << max_shell_radius_formed << " and _min_shell_radius " << _min_shell_radius << '\n';
   for (int r = max_shell_radius_formed; r >= _min_shell_radius; --r) {
+    cerr << "Looking for " << b[r] << " at radius " << r << '\n';
     DBKey dbkey{r, b[r]};
 
     const int tmp = _look_for_new_substituents(m, zatom, smiles_of_fragment_lost,
@@ -1695,10 +1762,9 @@ SubstituentIdentification::_look_for_new_substituents(
     UsedDuringLookups& lookup_data,
     Molecule_Specific_Temporary_Arrays& msta,
     IWString_and_File_Descriptor& output) {
-  uint32_t* b = new uint32_t[_shell_radius + 1];
-  std::unique_ptr<uint32_t[]> free_b(b);
+  std::unique_ptr<uint32_t[]> b = std::make_unique<uint32_t[]>(_shell_radius + 1);
 
-  int max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b, msta);
+  int max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b.get(), msta);
 
 // #define ECHO_BITS_FORMED
 #ifdef ECHO_BITS_FORMED
@@ -1710,7 +1776,9 @@ SubstituentIdentification::_look_for_new_substituents(
   cerr << '\n';
 #endif
 
+  cerr << "Radii " << max_shell_radius_formed << " and _min_shell_radius " << _min_shell_radius << '\n';
   for (int r = max_shell_radius_formed; r >= _min_shell_radius; --r) {
+    cerr << "Looking at radius " << r << '\n';
     DBKey dbkey{r, b[r]};
 
     if (! _look_for_new_substituents(m, zatom, lookup_data, dbkey, output)) {
@@ -1740,7 +1808,7 @@ SubstituentIdentification::_look_for_new_substituents(
     uint32_t& new_molecules_produced, IWString_and_File_Descriptor& output) {
   Dbt zkey{(void*)(&dbkey), sizeof(dbkey)};
 
-  // cerr << "Looking for bit " << dbkey.b << " rad " << dbkey.radius << '\n';
+  cerr << "Looking for bit " << dbkey.b << " rad " << dbkey.radius << " lost " << smiles_of_fragment_lost << '\n';
 
   IW_STL_Hash_Set already_processed;  // names of reagents when dealing with multiple
                                      // databases, don't re-create molecules
@@ -1780,12 +1848,13 @@ SubstituentIdentification::_look_for_new_substituents(
     IWString_and_File_Descriptor& output) {
   Dbt zkey{(void*)(&dbkey), sizeof(dbkey)};
 
-  // cerr << "Looking for bit " << dbkey.b << " rad " << dbkey.radius << '\n';
+  cerr << "Looking for bit " << dbkey.b << " rad " << dbkey.radius << " ndb " << _ndb << '\n';
 
   // If there are multiple databases, we don't want to add the same reagent
   // multiple times.
   lookup_data.ClearReagentNames();
 
+  cerr << "LINE " << __LINE__ << '\n';
   if (0 == _ndb) {
     return _look_for_new_substituents_db(m, zatom, lookup_data,
                                          dbkey, _db, zkey, output);
@@ -1816,6 +1885,7 @@ SubstituentIdentification::_look_for_new_substituents_db(
     Dbt& dbkey, IW_STL_Hash_Set& already_processed, IWString_and_File_Descriptor& output) {
   Dbt zdata;
 
+  cerr << "Looking up bit q " << rad_and_bit.b << '\n';
   if (int s = db.get(NULL, &dbkey, &zdata, 0); s != 0) {
     return 0;
   }
@@ -1851,13 +1921,14 @@ SubstituentIdentification::_look_for_new_substituents_db(
     return 0;
   }
 
-  // cerr << "Found bit in database\n";
-
   const_IWSubstring fromdb(reinterpret_cast<const char*>(zdata.get_data()), zdata.get_size());
 
   const absl::string_view sv(fromdb.data(), fromdb.length());
   substituent_identification::Replacements proto;
-  proto.ParseFromString(sv);
+  if (! proto.ParseFromString(sv)) {
+    cerr << "SubstituentIdentification::_look_for_new_substituents_db:invalid proto data\n";
+    return 0;
+  }
 
   return FormNewMolecules(m, zatom, rad_and_bit, lookup_data, proto, output);
 }
@@ -2248,7 +2319,7 @@ SubstituentIdentification::MoleculeIsRejected(Molecule& m,
 }
 
 /*
-  If all example molecules are stored in the database, a typica entry will look
+  If all example molecules are stored in the database, a typical entry will look
   like
 
   |O=C(Nc1s[1cH]c([n]1)C)C:1158204.1164662:2|
@@ -2264,10 +2335,9 @@ SubstituentIdentification::_matched_pairs_qsar(Molecule& m, const atom_number_t 
                                                IW_STL_Hash_Set& smiles_already_found,
                                                Molecule_Specific_Temporary_Arrays& msta,
                                                MMP_Related& mmp) {
-  uint32_t* b = new uint32_t[_shell_radius + 1];
-  std::unique_ptr<uint32_t[]> free_b(b);
+  std::unique_ptr<uint32_t[]> b = std::make_unique<uint32_t[]>(_shell_radius + 1);
 
-  auto max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b, msta);
+  auto max_shell_radius_formed = _compute_environment01(m, zatom, _shell_radius, b.get(), msta);
 
 // #define ECHO_BITS_FORMED
 #ifdef ECHO_BITS_FORMED
@@ -2708,8 +2778,7 @@ int
 SubstituentIdentification::_id_attch_pt_and_make_substituent_associations(
     Molecule& anchor, bond_type_t bt, Molecule& substituent,
     Molecule_Specific_Temporary_Arrays& msta) {
-  uint32_t* b = new uint32_t[_shell_radius + 1];
-  std::unique_ptr<uint32_t[]> free_b(b);
+  std::unique_ptr<uint32_t[]> b = std::make_unique<uint32_t[]>(_shell_radius + 1);
 
   const atom_number_t a1 = anchor.atom_with_isotope(1);
 
@@ -2719,7 +2788,7 @@ SubstituentIdentification::_id_attch_pt_and_make_substituent_associations(
     return 0;
   }
 
-  int max_radius_formed = _compute_environment01(anchor, a1, _shell_radius, b, msta);
+  int max_radius_formed = _compute_environment01(anchor, a1, _shell_radius, b.get(), msta);
 
   for (int i = 0; i <= max_radius_formed; ++i) {
     //  cerr << "Radius " << i << " bit " << b[i] << '\n';
@@ -2894,10 +2963,9 @@ SubstituentIdentification::_build_database(Molecule& m,
 
   Molecule_Specific_Temporary_Arrays msta(matoms);
 
-  int* numbers = new int[matoms];
-  std::unique_ptr<int[]> free_numbers(numbers);
+  std::unique_ptr<int[]> numbers = std::make_unique<int[]>(matoms);
 
-  _initialise_msta(m, numbers, msta);
+  _initialise_msta(m, numbers.get(), msta);
 
   Molecule mcopy(m);
 
@@ -3163,24 +3231,43 @@ SubstituentIdentification::_read_smiles_already_found(
 
 static void
 DisplayDashYOptions(std::ostream& output) {
-  output << " -Y dbproto        during building store serialized protos, then needed during read\n";
-  output << " -Y exph           make implicit Hydrogens explicit\n";
-  output << " -Y x0             during building strip leading 0's from identifiers - may help with db size\n";
-  output << " -Y amap           during addition, label connections points with atom map numbers - rather than isotopes\n";
-  output << " -Y write_frag     during addition, write the fragment added\n";
-  output << " -Y maxgen=<n>     during addition, max number of molecules produced per input molecule (def 10000)\n";
-  output << " -Y qat=<n>        during addition, number of query atoms to process - default the first query atom match\n";
-  output << " -Y rpt=<n>        report progress every <n> molecules processed\n";
-  output << " -Y textproto      write substituent_identification::Result textproto as output\n";
-  output << " -Y smitextproto   write smiles + substituent_identification::Result textproto as output\n";
+  output << R"(
+ -Y dbproto        during building store serialized protos, then needed during read
+ -Y textproto=<fname> during building also write database contents as textproto form to <fname>
+ -Y exph           make implicit Hydrogens explicit
+ -Y x0             during building strip leading 0's from identifiers - may help with db size
+ -Y amap           during addition, label connections points with atom map numbers - rather than isotopes
+ -Y write_frag     during addition, write the fragment added
+ -Y maxgen=<n>     during addition, max number of molecules produced per input molecule (def 10000)
+ -Y qat=<n>        during addition, number of query atoms to process - default the first query atom match
+ -Y rpt=<n>        report progress every <n> molecules processed
+ -Y textproto      write substituent_identification::Result textproto as output
+ -Y smitextproto   write smiles + substituent_identification::Result textproto as output
+)";
 
   ::exit(0);
 }
 
 int
+SubstituentIdentification::SetupTextProtoStream(const const_IWSubstring fname) {
+  IWString tmp(fname);
+  tmp.EnsureEndsWith(".textproto");
+  if (! _stream_for_textproto.open(tmp)) {
+    cerr << "Cannot open '" << tmp << "'\n";
+    return 0;
+  }
+
+  if (_verbose) {
+    cerr << "Database contents written as textproto to '" << tmp << "'\n";
+  }
+
+  return 1;
+}
+
+int
 SubstituentIdentification::operator()(int argc, char** argv) {
   Command_Line cl(argc, argv,
-                  "vA:E:i:g:ld:R:P:M:m:cs:q:ab:r:C:H:fw:pIBu:kY:L:yeX:hV:");
+                  "vA:E:i:g:ld:R:P:M:m:cs:q:ab:r:C:H:fw:pIBu:kY:L:ye:X:hV:");
 
   if (cl.unrecognised_options_encountered()) {
     cerr << "Unrecognised options encountered\n";
@@ -3386,10 +3473,16 @@ SubstituentIdentification::operator()(int argc, char** argv) {
   }
 
   if (cl.option_present('e')) {
-    _concatenate_all_examples = 1;
+    const_IWSubstring e = cl.string_value('e');
+    if (e == '.') {
+      _concatenate_all_examples = 1;
 
-    if (_verbose) {
-      cerr << "Will store all examples of a substituent - not just first\n";
+      if (_verbose) {
+        cerr << "Will store all examples of a substituent - not just first\n";
+      }
+    } else if (! SetMaxInstancesToConcatenate(e, _verbose)) {
+      cerr << "The maximum number of instances to store (-e) must be a whole +ve number\n";
+      return 1;
     }
   }
 
@@ -3449,6 +3542,12 @@ SubstituentIdentification::operator()(int argc, char** argv) {
         _store_protos = 1;
         if (_verbose) {
           cerr << "Database will contain serialized protos\n";
+        }
+      } else if (y.starts_with("textproto=")) {
+        y.remove_leading_chars(10);
+        if (! SetupTextProtoStream(y)) {
+          cerr << "Cannot initialise textproto file '" << y << "'\n";
+          return 1;
         }
       } else if (y == "amap") {
         _apply_atom_map_labels = 1;

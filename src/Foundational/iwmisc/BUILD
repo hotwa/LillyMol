@@ -243,6 +243,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "sorted_list",
+    srcs = [
+        "sorted_list.cc",
+    ],
+    hdrs = [
+        "sorted_list.h",
+    ],
+    deps = [
+        "//Foundational/iwaray",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "test_iwdigits",
     srcs = [
@@ -307,6 +321,17 @@ cc_test(
     deps = [
         ":memoized_floats",
         "@benchmark//:benchmark_main",
+    ],
+)
+
+cc_test(
+    name = "sorted_list_test",
+    srcs = [
+        "sorted_list_test.cc",
+    ],
+    deps = [
+        ":sorted_list",
+        "@googletest//:gtest_main",
     ],
 )
 

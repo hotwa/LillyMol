@@ -1,6 +1,8 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build_deps:install.bzl", "local_install")
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@rules_proto_grpc_cpp//:defs.bzl", "cpp_grpc_compile")
+
 
 
 local_install(
@@ -641,6 +643,7 @@ cc_binary(
         "//Foundational/histogram:iwhistogram",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
+        "//Foundational/iwmisc:sorted_list",
         "//Foundational/iwqsort",
         "//Utilities/GFP_Tools:gfp",
         "@onetbb//:tbb",

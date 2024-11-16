@@ -55,3 +55,23 @@ If the `-T` option is used, then for each molecule, all neighbours within that d
 are accumulated, so it is very likely that the molecules will have differing numbers of
 neighbours.
 
+### TBB
+There is a version of this tool that uses TBB (Threading Building Blocks) to subdivide
+the work across threads. Many of the options are the same, but the most important is
+the -h option, which controls the number of tasks applied to the nearest neighbour
+determination.
+
+This turns out to be a something complex operation involving a need to identify
+chunks of the data that can be updated in parallel.
+
+Currently the number of workers, -h option, can be one of 1,2,4,8,16. The degree
+of parallelism is approximately half of the -h value. So, on an 8 core machine
+-h 16 will result in almost full use of the machine, but as usual, scaling is
+not linear.
+![speed](Images/gfp_nearneighbours_single_file_tbb.png)
+Although in this case, serial execution takes 85 seconds, so an ideal 8 way
+speed-up would result in -h 16 running in 10.1 seconds, but we observe 11.22
+which is an unusually good speed-up for 8 cores.
+
+A ruby script was used to write the code for 16 workers, and this could
+be adapted to higher numbers of cores [script](/src/Utilities/GFP_Tools/gfp_nearneighbours_single_file_tbb.rb).

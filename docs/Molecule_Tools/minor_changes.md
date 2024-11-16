@@ -11,7 +11,8 @@ transformations exhaustively, potentially large numbers of molecules
 can be formed.
 
 Taking the default, which turns on all known transformations that
-do not depend on external fragments.
+do not depend on external fragments, and which operates on all
+possible sites in the starting molecule
 ```
 minor_changes file.smi > file.variants.smi
 ```
@@ -19,12 +20,12 @@ generates 31k molecules from a starting set of 1000 in 1.2 seconds.
 
 The rules applied can be controlled via a configuration file, which will
 also enable specification of fragments to be added, and reactions to be
-performed. A shell script (minor_changes.sh)[../../contrib/bin/minor_changes.sh]
+performed. A shell script [minor_changes.sh](../../contrib/bin/minor_changes.sh)
 invokes the executable with all options turned on, as well as making
 available some reaction based transformations, as well as a small
 fragment library (60 functional groups, max 3 atoms). Given
-1000 starting molecules that generates 337k new molecules in about
-15 seconds.
+1000 random starting molecules the tool generates 337k new molecules in about
+15 seconds using that configuration file.
 
 Obviously if a larger fragment library is used, those number can increase
 dramatically - see below for how to generate fragment libraries.
@@ -41,13 +42,29 @@ attempts are made to have it generate plausible molecules, so the results should
 mostly be reasonable, but this is definitely not guaranteed.  Passing the
 results through a synthetic feasibility assessment would generally be desirable. 
 Experience says that this may eliminate a significant fraction of what is
-generated, but this is obviously very dependent on the parameters selected.
+generated, but this is obviously very dependent on the parameters selected and
+the starting molecules.
 
 ## Complementary Tools
 `ring_replacement` can be used for exploring different substitution patterns
 in rings. By default, `minor_changes` does not swap atoms in an aromatic ring. Pipe
 the output from `ring_replacement` to this tool in order to explore
 further variants involving different ring atom arrangements.
+
+[substituent_identification](substituent_identification.md) can perform 
+sidechain replacements of varying precision.
+
+[random_molecular_permuations](random_molecular_permuations.md) also contains
+various transformations, possibly not as well developed as in minor_changes,
+but which can often generate interesting modifications of a starting structure.
+
+[smiles_mutation](smiles_mutation.md) performs random string based transformations
+on smiles strings, attempting molecule interpretation on the resulting strings.
+Most strings generated are invalid.
+
+[SAFE](SAFE.md) provides a very flexible and powerful means of generating
+molecular variants. Although a newer tool, developed after the publication
+of SAFE, it is probably the most 'interesting' de-novo generator in LillyMol.
 
 
 ## Specifics.
