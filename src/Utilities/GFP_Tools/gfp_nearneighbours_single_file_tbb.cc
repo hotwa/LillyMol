@@ -649,14 +649,11 @@ gfp_nearneighbours_diagonal(F* pool, const int istart, const int istop)
   return;
 }
 
-/*
-  Not really parallel at all
-*/
+//  Not really parallel at all
 
 template <typename F>
 void
-gfp_nearneighbours_parallel1(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel1(F* pool, const int pool_size) {
   gfp_nearneighbours_diagonal(pool, 0, pool_size);
 
   return;
@@ -664,8 +661,7 @@ gfp_nearneighbours_parallel1(F* pool, const int pool_size)
 
 template <typename F>
 void
-gfp_nearneighbours_parallel2(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel2(F* pool, const int pool_size) {
   const int half = pool_size / 2;
 
   tbb::task_group g1;
@@ -686,8 +682,7 @@ gfp_nearneighbours_parallel2(F* pool, const int pool_size)
 
 template <typename F>
 void
-gfp_nearneighbours_parallel3(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel3(F* pool, const int pool_size) {
   const int third = pool_size / 3;
   const int two_thirds = (2 * pool_size) / 3;
 
@@ -716,6 +711,8 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   }
 
   p[16] = pool_size;
+
+  // Written by gfp_nearneighbours_single_file_tbb.rb
 
   tbb::task_group g0;
   g0.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[1], p[2]); });
@@ -933,21 +930,18 @@ gfp_nearneighbours_parallel16_latin_square(F* pool, const int pool_size)
   Idea from Steve Ruberg
 
   Actually this is kind of like a Latin Square, but I ended up writing a ruby
-  script, `latin_square.rb` that does this explicitly.
+  script that does this explicitly.
 */
 
 template <typename F>
 void
-gfp_nearneighbours_parallel8_latin_square(F* pool, const int pool_size)
-{
+gfp_nearneighbours_parallel8_latin_square(F* pool, const int pool_size) {
   int p[9];
   for (int i = 0; i < 8; ++i) {
     p[i] = (i * pool_size) / 8;
   }
 
   p[8] = pool_size;
-
-  // This code is written by latin_square.rb
 
   tbb::task_group g1;
   g1.run([&] { gfp_nearneighbours(pool, p[0], p[1], p[7], p[8]); });
