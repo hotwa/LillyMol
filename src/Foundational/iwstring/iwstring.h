@@ -1023,6 +1023,24 @@ Equals(const const_IWSubstring& lhs, const std::string_view& rhs) {
   return 0 == ::strncmp(lhs.data(), rhs.data(), lhs.length());
 }
 
+// Used for reading records from tabular files where there might
+// be quoted tokens.
+// For each token encountered, add to `tstart` and `tstop` the
+// start and stop for that token - excluding quotes.
+// The output can be processed with something like:
+//
+//  int ntokens = TokeniseWithQuotes(buffer, ',', _tstart, _tstop);
+//  if (ntokens < 0) .... fail.
+//  for (int i = 0; i < ntokens; ++i) {
+//    int b = _tstart[i];
+//    int e = _tstop[i];
+//    const_IWSubstring token(buffer.rawdata() + b, e - b);
+int
+TokeniseWithQuotes(const const_IWSubstring& buffer,
+                   char sep,
+                   resizable_array<int>& tstart,
+                   resizable_array<int>& tstop);
+
 }  // namespace iwstring
 
 inline std::ostream &

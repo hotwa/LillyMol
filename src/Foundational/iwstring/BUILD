@@ -28,6 +28,7 @@ cc_library(
         "remove_suffix.cc",
         "string_change.cc",
         "string_relationals.cc",
+        "tokenise_with_quotes.cc",
         "unhtml.cc",
     ],
     hdrs = [
@@ -87,4 +88,16 @@ cc_test(
         "@googletest//:gtest_main",
     ],
     timeout="short",
+)
+
+cc_test(
+    name = "tokenise_with_quotes_test",
+    srcs = [
+        "tokenise_with_quotes_test.cc",
+    ],
+    deps = [
+        ":iwstring",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
 )

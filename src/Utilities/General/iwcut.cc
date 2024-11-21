@@ -6,18 +6,18 @@
                      + __GNUC_MINOR__ * 100 \
                                           + __GNUC_PATCHLEVEL__)
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <memory>
-#include <algorithm>
 #include <random>
-#include <cctype>
-using std::cerr;
-using std::endl;
 
 #include "Foundational/cmdline/cmdline.h"
 #include "Foundational/data_source/iwstring_data_source.h"
 #include "Foundational/iwmisc/misc.h"
 #include "Foundational/iwmisc/iwre2.h"
+
+using std::cerr;
 
 static void
 usage(int rc)
@@ -710,7 +710,7 @@ iwcut(const const_IWSubstring & buffer,
   {
     cerr << ' ' << word_beginnings[i];
   }
-  cerr << endl;
+  cerr << '\n';
 #endif
 
   for (int i = 0; i < nr; i++)
@@ -797,7 +797,7 @@ locate_quoted_tokens_word_beginnings(const const_IWSubstring & buffer,
 
   for (int i = 1; i < n; ++i)
   {
-//  cerr << " char " << i << " '" << buffer[i] << "' quote " << in_quote << endl;
+//  cerr << " char " << i << " '" << buffer[i] << "' quote " << in_quote << '\n';
     if (dquote == buffer[i])
       in_quote = ! in_quote;
     else if (in_quote)
@@ -809,7 +809,7 @@ locate_quoted_tokens_word_beginnings(const const_IWSubstring & buffer,
 #ifdef DEBUG_QUOTED_WB
   for (int i = 0; i < word_beginnings.size(); ++i)
   {
-    cerr << " wb " << i << ' ' << word_beginnings[i] << endl;
+    cerr << " wb " << i << ' ' << word_beginnings[i] << '\n';
   }
 #endif
 
@@ -828,7 +828,7 @@ iwcut(const const_IWSubstring & buffer,
   if (columns_in_input > 0)
     word_beginnings.resize(columns_in_input);
 
-//cerr << "Line " << __LINE__ << " iqt " << input_is_quoted_tokens << endl;
+//cerr << "Line " << __LINE__ << " iqt " << input_is_quoted_tokens << '\n';
 
   int ncol;
   if (input_is_quoted_tokens)
@@ -840,7 +840,7 @@ iwcut(const const_IWSubstring & buffer,
 
 #ifdef DEBUG_IWCUT
   cerr << "Processing '" << buffer << "'\n";
-  cerr << "ncol " << ncol << " count " << buffer.ccount(input_token_separator) << endl;
+  cerr << "ncol " << ncol << " count " << buffer.ccount(input_token_separator) << '\n';
 #endif
 
   if (ncol > columns_in_input)
@@ -944,7 +944,7 @@ find_column_number(const IWString & descriptor,
     columns_requested.add_if_not_already_present(i);
 
     if (verbose > 1)
-      cerr << "Descriptor '" << d << " in column " << (i + 1) << endl;
+      cerr << "Descriptor '" << d << " in column " << (i + 1) << '\n';
 
     return 1;
   }
@@ -968,8 +968,9 @@ identify_column (const IWString & descriptor,
                  resizable_array<int> & columns_requested)
         
 {
-  if (! match_descriptor_names_as_regular_expressions)
+  if (! match_descriptor_names_as_regular_expressions) {
     return find_column_number(descriptor, header, columns_requested);
+  }
 
   re2::StringPiece tmp(descriptor.data(), descriptor.length());
   RE2 rx(tmp);
@@ -995,7 +996,7 @@ identify_column (const IWString & descriptor,
       rc++;
 
       if (verbose > 1)
-        cerr << "Descriptor '" << d << " in column " << (i + 1) << endl;
+        cerr << "Descriptor '" << d << " in column " << (i + 1) << '\n';
     }
   }
 
@@ -1014,7 +1015,7 @@ do_split(const const_IWSubstring & buffer,
 
   const char dquote = '"';
 
-//cerr << "Looking for wb in '" << buffer << endl;
+//cerr << "Looking for wb in '" << buffer << '\n';
 
   int previous_delimiter = -1;    // 
 
@@ -1087,7 +1088,7 @@ determine_descriptors_to_be_output(const const_IWSubstring & buffer,
   cerr << "header split into " << header.size() << " items\n";
   for (int i = 0; i < header.number_elements(); ++i)
   {
-    cerr << " col " << i << " dname " << *header[i] << endl;
+    cerr << " col " << i << " dname " << *header[i] << '\n';
   }
 #endif
 
@@ -1127,7 +1128,7 @@ determine_descriptors_to_be_output(const const_IWSubstring & buffer,
       continue;
     }
 
-    cerr << buffer << endl;
+    cerr << buffer << '\n';
     rc = 0;
   }
 
@@ -1188,7 +1189,7 @@ iwcut(iwstring_data_source & input,
 
     if (! iwcut(buffer, columns_requested, output))
     {
-      cerr << "Fatal error on line " << input.lines_read() << endl;
+      cerr << "Fatal error on line " << input.lines_read() << '\n';
       return 0;
     }
 
@@ -1380,7 +1381,7 @@ iwcut (int argc, char ** argv)
 //      {
 //        cerr << ' ' << (columns_requested[i] + 1);
 //      }
-//      cerr << endl;
+//      cerr << '\n';
 //    }
   }
 
@@ -1523,7 +1524,7 @@ iwcut (int argc, char ** argv)
     cerr << "Will extract these descriptors\n";
     for (int i = 0; i < descriptors_requested.number_elements(); i++)
     {
-      cerr << ' ' << *(descriptors_requested[i]) << endl;
+      cerr << ' ' << *(descriptors_requested[i]) << '\n';
     }
   }
 
@@ -1532,7 +1533,7 @@ iwcut (int argc, char ** argv)
     cerr << "Will extract these columns\n";
     for (int i = 0; i < columns_requested.number_elements(); i++)
     {
-      cerr << ' ' << (columns_requested[i] + 1) << endl;
+      cerr << ' ' << (columns_requested[i] + 1) << '\n';
     }
   }
 

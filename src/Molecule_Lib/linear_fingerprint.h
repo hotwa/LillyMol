@@ -142,6 +142,8 @@ class LinearFpStatus {
     // Called once for each molecule so we have ready access to atom numbers
     // during debugging.
     void _WriteLabelledSmiles() const;
+
+    int DebugPrint(std::ostream& output) const;
     
   public:
     LinearFpStatus(const Options& options, const Molecule& m,

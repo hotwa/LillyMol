@@ -16,7 +16,6 @@ see various missing columns.
 ## Descriptors.
 The following descriptors are computed.
 
-| ---- | ---------- |
 | name | definition |
 | ---- | ---------- |
 | natoms | the number of atoms in the molecule |
@@ -323,7 +322,7 @@ off all optional descriptors. This can make a big difference in run times. Runni
 ```
 iwdescr.sh -O all file.smi > file.w
 ```
-takes 5.7 seconds to process 20k molecules, generating 264 columns of ouput. Running
+takes 5.7 seconds to process 20k molecules, generating 277 columns of ouput. Running
 ```
 iwdescr.sh -O none file.smi > file.w
 ```
