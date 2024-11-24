@@ -2,7 +2,7 @@
 
 Based on the very nice post by Pat Walters
 [Practical Cheminformatics](https://practicalcheminformatics.blogspot.com/2024/11/some-thoughts-on-splitting-chemical.html)
-I decided to try to apply train_test_split_optimise to the Biogen ADME datasets
+I decided to apply train_test_split_optimise to the Biogen ADME datasets
 he uses.
 
 Pat covers various splitting strategies that I will not recreate here. Instead
@@ -32,7 +32,6 @@ into LillyMol script [xgbd_make](/contrib/bin/xgbd/xgbd_make.py).
 | RLM | 0.42 | 0.41 |
 | rPPB | 0.46 | 0.51 |
 | Sol | 0.25 | 0.35 |
-| ------- | ------ | -------- |
 
 Generally the 285 LillyMol features perform better - although this is not universally
 true, and when the Biogen features are better, the difference is small. Use the LillyMol
@@ -48,7 +47,6 @@ Using RMS as a measure of performance shows similar results, smaller numbers are
 | RLM | 0.584 | 0.594 |
 | rPPB | 0.548 | 0.526 |
 | Sol | 0.656 | 0.604 |
-| ------- | ------ | -------- |
 
 All performance measures were calculated with iwstats which provides a variety of
 other measures of model performance. The trend of preference for the LillyMol features
@@ -142,7 +140,6 @@ column 2 is from the optimised split. Using 285 LillyMol features. Lower numbers
 | RLM | 0.594 | 0.671 |
 | rPPB | 0.526 | 0.635 |
 | Sol | 0.604 | 0.632 |
-| ------- | ------ | -------- |
 
 If we look at R2, higher numbers better, the corresponding results are
 
@@ -154,7 +151,6 @@ If we look at R2, higher numbers better, the corresponding results are
 | RLM | 0.411 | 0.392 |
 | rPPB | 0.510 | 0.371 |
 | Sol | 0.352 | 0.205 |
-| ------- | ------ | -------- |
 
 Regardless of how performance is measured, the performance of the
 model built using the optimised split is significantly worse than
