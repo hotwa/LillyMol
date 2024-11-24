@@ -139,3 +139,6 @@ than what a stratified, or random set might have.
 that are both measurably more separated than random or other splitting
 strategies, and which have been found to be very challenging for
 model building.
+
+Update: a more specific example of use of the tool is at
+[Workflow](/docs/Workflows/train_test_split_optimise.md)

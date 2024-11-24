@@ -35,7 +35,7 @@ into LillyMol script [xgbd_make](/contrib/bin/xgbd/xgbd_make.py).
 | ------- | ------ | -------- |
 
 Generally the 285 LillyMol features perform better - although this is not universally
-true, and then the Biogen features are better, the difference is small. Use the LillyMol
+true, and when the Biogen features are better, the difference is small. Use the LillyMol
 features going forward, especially since there are many fewer of them than what came
 from Biogen.
 
@@ -55,7 +55,7 @@ other measures of model performance. The trend of preference for the LillyMol fe
 holds across other measures.
 
 ## Split the datasets.
-Use train_test_split_optimise to split each dataset. Combine both train and test
+Use train_test_split_optimise to split each dataset. First combine both train and test
 to get a combined dataset and generate fingerprints.
 
 ```
@@ -124,15 +124,15 @@ set molecules separated by small distances. The optimisation appears to have
 worked.
 
 ## Models
-The work of Sheridan and others strongly supports the idea that test set molecules
+The work of Sheridan and others supports the idea that test set molecules
 well separated from the training set will be harder to predict. We can now
-test that hypothesis in the limit of strongly separated train and
+further examine that hypothesis in the limit of strongly separated train and
 test sets - note there is no claim of this being an optimal set, an 
 optimal split is likely to be very hard to compute.
 
 Using the LillyMol features, compare the RMS results for the new models with
 what was observed above. Column 1 is the default split from Biogen and
-column 2 is from the optimised split. Lower numbers better.
+column 2 is from the optimised split. Using 285 LillyMol features. Lower numbers better.
 
 | DataSet | Default | Optimised |
 | ------- | ------ | -------- |
@@ -161,16 +161,27 @@ model built using the optimised split is significantly worse than
 the model built using the default split.
 
 Note that these are still valid models, if we randomise the response
-we see what a random model would do an indeed we find an R2 of zero and,
-for hPPB, an RMS of 0.976 (compare 0.598 above).
+we can see what a random model would do. We find an R2 of zero and,
+for hPPB, an RMS of 0.976 (compare 0.598 above). So there is still
+enough information in the training set to be informative of the test
+set, but the effectivness of the model is significantly reduced.
 
 This finding further supports the findings of Sheridan that distance from
 the training set is an important indicator of model performance.
 This is of course in accord with reasonable medchem intuition.
 
 ## Details
-All work for this study was done with dopattern. For example building
-the models was done via
+All work for this study was done with dopattern. For example, descriptor
+computation for the optimised split was done via
+```
+dopattern.sh -do HLM,hPPB,MDR1_ER,RLM,rPPB,Sol
+        'cd % && make_descriptors.sh -w -abr -j 2 SPLITR0.smi > SPLITR0.lly
+dopattern.sh -do HLM,hPPB,MDR1_ER,RLM,rPPB,Sol
+        'cd % && make_descriptors.sh -w -abr -j 2 SPLITE0.smi > SPLITE0.lly
+```
+which could theoretically have been combined into a nested dopattern invocation.
+
+Building the models was done via
 ```
 dopattern.sh -do HLM,hPPB,MDR1_ER,RLM,rPPB,Sol 
         'cd % && xgbd_make.sh --mdir SPLIT --activity combined.activity SPLITR0.lly'
@@ -181,5 +192,7 @@ datasets. Evaluation was done via iwstats
 dopattern.sh -do HLM,hPPB,MDR1_ER,RLM,rPPB,Sol 
         'cd % && iwstats -E combined.activity -p 2 -w -Y allequals test.split.pred' | grep R2
 ```
-dopattern can be a key productivity leverage when performing a set 
-of operations across a range of datasets.
+dopattern can provide key productivity leverage when performing an identical set 
+of operations across a range of datasets. And while it was not done here, dopattern
+enables parallel and distributed computation of the individual tasks, enabling
+further efficiencies.
