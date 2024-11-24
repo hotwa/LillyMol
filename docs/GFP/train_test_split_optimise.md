@@ -80,6 +80,20 @@ the successful optimisations found. This is on very old hardware...
 Clearly we need to add an option to terminate an optimisation if it has
 become unproductive.
 
+### Update
+That has been done. And as a scalability test, this method has been used to
+split a 100k dataset.
+```
+train_test_split_optimise -x 30000 -f 0.80 -n 3 -S /tmp/S -o 2500000 -r 10000 -v /tmp/nn 
+```
+which takes about 5 minutes per split - on a faster computer than was used earlier.
+
+The new option is the -x option, which specifies that if there is a period of
+30k optimisations without any change, the optimisation is abandoned. Again, there
+is no "right" answer for what that number should be.
+
+## Results
+
 Does this actually work? It appears the answer is yes.
 
 We can plot the distribution of nearest neighbours generated via two different

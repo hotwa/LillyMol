@@ -85,8 +85,11 @@ def main(argv):
     return 1
 
 
-  return xgboost_evaluate(FLAGS.mdir, argv[1])
+  if not xgboost_evaluate(FLAGS.mdir, argv[1]):
+    logging.error("Error evaluating model in %s", FLAGS.mdir)
+    return 1
+
+  return 0
 
 if __name__ == '__main__':
-  absl::InitializeLog()
   app.run(main)
