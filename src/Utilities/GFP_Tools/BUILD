@@ -1,9 +1,8 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//build_deps:install.bzl", "local_install")
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 # load("@rules_proto_grpc_cpp//:defs.bzl", "cpp_grpc_compile")
 
-
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//build_deps:install.bzl", "local_install")
 
 local_install(
     name = "install",
@@ -19,7 +18,6 @@ local_install(
         ":gfp_iterative_expansion",
         ":gfp_leader",
         ":gfp_leader_standard",
-        ":gfp_standalone",
         ":gfp_leader_tbb",
         ":gfp_lnearneighbours",
         ":gfp_lnearneighbours_standard",
@@ -36,6 +34,7 @@ local_install(
         ":gfp_spread_buckets",
         ":gfp_spread_omp",
         ":gfp_spread_standard",
+        ":gfp_standalone",
         ":gfp_svmfp_score",
         ":gfp_svmfp_score_tbb",
         ":gfp_to_descriptors",
@@ -43,10 +42,10 @@ local_install(
         ":gfp_to_svm_lite.v2",
         ":iwstats",
         ":marvin2gfp",
+        ":nn2csv",
         ":nn_leader_and_jp",
         ":nn_merge",
         ":nn_merge_from_smiles",
-        ":nn2csv",
         ":nplotnn",
         ":parallel_nn_search_to_gfp_spread",
         ":random_fingerprint",
@@ -144,7 +143,7 @@ cc_proto_library(
     name = "nn_request_cc_proto",
     deps = [
         ":nn_request_proto",
-    ]
+    ],
 )
 
 py_proto_library(
@@ -258,11 +257,11 @@ cc_binary(
         "gfp_distance_filter_standard.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp_standard",
     ],
 )
@@ -274,7 +273,7 @@ cc_binary(
     ],
     deps = [
         ":gfp",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
@@ -441,29 +440,29 @@ cc_binary(
 )
 
 cc_binary(
-  name = "gfp_server",
-  srcs = [
-      "gfp_server.cc",
-  ],
-  deps = [
-       "nn_request_cc_proto",
-       "//Foundational/cmdline:iwcmdline",
-       "//Foundational/data_source:iwstring_data_source",
-       "//Molecule_Lib:iwmfingerprint",
-       "//Molecule_Lib:iwmolecule",
-       "//Molecule_Lib:moleculeio",
-       "//Molecule_Tools:mpr",
-       "//Molecule_Tools:maccskeys_fn5_lib",
-       "//Utilities/GFP_Tools:gfp_standard",
-       "//Utilities/GFP_Tools:nearneighbours_cc_proto",
-       "@cppzmq//:cppzmq",
-       "@libzmq//:libzmq",
-       "@com_google_protobuf//:protobuf",
-  ],
-  tags = [
-      "gfp_server",
-      "zeromq",
-  ],
+    name = "gfp_server",
+    srcs = [
+        "gfp_server.cc",
+    ],
+    tags = [
+        "gfp_server",
+        "zeromq",
+    ],
+    deps = [
+        "nn_request_cc_proto",
+        "//Foundational/cmdline:iwcmdline",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Molecule_Lib:iwmfingerprint",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "//Molecule_Tools:maccskeys_fn5_lib",
+        "//Molecule_Tools:mpr",
+        "//Utilities/GFP_Tools:gfp_standard",
+        "//Utilities/GFP_Tools:nearneighbours_cc_proto",
+        "@com_google_protobuf//:protobuf",
+        "@cppzmq",
+        "@libzmq",
+    ],
 )
 
 # cc_binary(
@@ -746,12 +745,12 @@ cc_binary(
     ],
     deps = [
         ":gfp_bit_subset",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:normalisation",
-        "//Foundational/iw_tdt:iw_tdt",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -769,12 +768,12 @@ cc_binary(
     ],
     deps = [
         "gfp_bit_subset",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:normalisation",
-        "//Foundational/iw_tdt:iw_tdt",
         "//Utilities/GFP_Tools:gfp",
         "@onetbb//:tbb",
     ],
@@ -865,12 +864,12 @@ cc_binary(
         "nn_merge_from_smiles.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iwqsort:iwqsort",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Foundational/iwqsort",
         "//Utilities/GFP_Tools:smiles_id_dist",
     ],
 )
@@ -938,10 +937,10 @@ cc_binary(
         "marvin2gfp.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
         "//Foundational/iwmisc:sparse_fp_creator",
     ],
 )
@@ -990,11 +989,11 @@ cc_binary(
         "random_fingerprint.cc",
     ],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwbits:iwbits",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
     ],
 )
 

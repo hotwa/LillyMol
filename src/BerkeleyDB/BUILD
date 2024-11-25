@@ -23,11 +23,11 @@ cc_binary(
     ],
     tags = ["berkeleydb"],
     deps = [
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "@berkeleydb",
     ],
 )
@@ -157,12 +157,13 @@ cc_binary(
         "@berkeleydb",
     ],
 )
+
 cc_binary(
     name = "iwbdb_merge_into_tdt",
     srcs = [
         "iwbdb_merge_into_tdt.cc",
     ],
-    tags = ["berkeleydb"],   
+    tags = ["berkeleydb"],
     deps = [
         "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",

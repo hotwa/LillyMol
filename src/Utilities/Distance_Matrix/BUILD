@@ -21,10 +21,10 @@ cc_binary(
     ],
     deps = [
         ":distance_matrix_base",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -97,6 +97,7 @@ cc_binary(
         "//Foundational/iwmisc",
     ],
 )
+
 cc_binary(
     name = "distance_matrix_simple_cluster",
     srcs = [
@@ -106,10 +107,10 @@ cc_binary(
     ],
     deps = [
         ":distance_matrix_base",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -120,10 +121,10 @@ cc_binary(
     ],
     deps = [
         ":distance_matrix_base",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 

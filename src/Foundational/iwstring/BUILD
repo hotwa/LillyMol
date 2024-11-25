@@ -79,6 +79,7 @@ cc_binary(
 
 cc_test(
     name = "iwstring_test",
+    timeout = "short",
     srcs = [
         "iwstring_test.cc",
     ],
@@ -87,7 +88,6 @@ cc_test(
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
-    timeout="short",
 )
 
 cc_test(

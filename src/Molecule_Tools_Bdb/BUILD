@@ -1,5 +1,5 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build_deps:install.bzl", "local_install")
 
 package(default_visibility = ["//visibility:public"])
@@ -16,7 +16,6 @@ local_install(
         ":substituent_identification",
     ],
 )
-
 
 proto_library(
     name = "smi2rings_proto",
@@ -35,7 +34,7 @@ cc_proto_library(
 proto_library(
     name = "substituent_identification_proto",
     srcs = [
-      "substituent_identification.proto",
+        "substituent_identification.proto",
     ],
 )
 
@@ -99,7 +98,7 @@ cc_binary(
 cc_binary(
     name = "dicer2bdb",
     srcs = [
-      "dicer2bdb.cc",
+        "dicer2bdb.cc",
     ],
     tags = ["berkeleydb"],
     deps = [
@@ -128,8 +127,9 @@ cc_binary(
         "@berkeleydb",
     ],
 )
-cc_binary(  
-    name = "in_lilly_database_bdb",   
+
+cc_binary(
+    name = "in_lilly_database_bdb",
     srcs = [
         "in_lilly_database_bdb.cc",
     ],
@@ -191,6 +191,7 @@ cc_binary(
         "@berkeleydb",
     ],
 )
+
 cc_binary(
     name = "structure_database_load",
     srcs = [

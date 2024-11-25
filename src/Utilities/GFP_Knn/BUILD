@@ -1,4 +1,3 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//build_deps:install.bzl", "local_install")
 
 local_install(
@@ -18,11 +17,11 @@ cc_binary(
     deps = [
         ":nn_specification",
         ":nn_support",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/GFP_Tools:gfp",
     ],
 )
@@ -36,11 +35,11 @@ cc_binary(
         ":extract_from_tdt_form",
         ":iwpvalue",
         ":nn_support",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
         "//Utilities/Distance_Matrix:distance_matrix_base",
         "//Utilities/GFP_Tools:bsquared",
         "//Utilities/GFP_Tools:gfp",
@@ -54,10 +53,10 @@ cc_binary(
     ],
     deps = [
         ":iwpvalue",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwmisc",
     ],
 )
 
@@ -70,16 +69,16 @@ cc_library(
         "extract_from_tdt_form.h",
     ],
     deps = [
-        "//Foundational/iwstring:iwstring",
+        "//Foundational/iwstring",
     ],
 )
 
 cc_library(
     name = "iwpvalue",
     srcs = [
-        "iwpvalue.cc",
         "dq1da.c",
         "idamax.c",
+        "iwpvalue.cc",
         "machcon.c",
         "uni.c",
         "xerror.c",
@@ -102,32 +101,32 @@ cc_library(
     ],
     deps = [
         ":nn_support",
-        "//Foundational/accumulator:accumulator",
+        "//Foundational/accumulator",
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
-        "//Foundational/iwmisc:iwmisc",
-        "//Foundational/iw_tdt:iw_tdt",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
     ],
 )
 
 cc_library(
     name = "nn_support",
     srcs = [
-        "nn_stuff.cc",
         "nn_specification.cc",
+        "nn_stuff.cc",
         "prediction_weight_function.cc",
     ],
     hdrs = [
-        "nn_results_.h",
         "nn_results.h",
+        "nn_results_.h",
         "nn_specification.h",
         "nn_stuff.h",
         "prediction_weight_function.h",
     ],
     deps = [
         ":extract_from_tdt_form",
-        "//Foundational/iwbits:iwbits",
-        "//Foundational/iwmisc:iwmisc",
+        "//Foundational/iwbits",
+        "//Foundational/iwmisc",
         "//Utilities/Distance_Matrix:distance_matrix_base",
         "//Utilities/GFP_Tools:gfp",
     ],

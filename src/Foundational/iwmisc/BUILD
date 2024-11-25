@@ -1,3 +1,4 @@
+load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 proto_library(
@@ -5,15 +6,15 @@ proto_library(
     srcs = [
         "for_testing.proto",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "for_testing_cc_proto",
     deps = [
         "for_testing_proto",
-    ]
+    ],
 )
-
 
 cc_library(
     name = "activity_from_file",
@@ -117,8 +118,8 @@ cc_library(
         "toml_support.h",
     ],
     deps = [
+        "@com_google_absl//absl/status",
         "@tomlplusplus//:toml++",
-        "@com_google_absl//absl/status:status",
     ],
 )
 
@@ -185,7 +186,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//Foundational/iwstring",
-        "@com_google_absl//absl/strings:strings",
+        "@com_google_absl//absl/strings",
         "@re2",
     ],
 )
@@ -251,10 +252,10 @@ cc_library(
     hdrs = [
         "sorted_list.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//Foundational/iwaray",
     ],
-    visibility = ["//visibility:public"],
 )
 
 cc_binary(
@@ -346,5 +347,5 @@ cc_test(
         ":ltoml",
         "@googletest//:gtest_main",
         "@tomlplusplus//:toml++",
-    ]
+    ],
 )
