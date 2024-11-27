@@ -7576,7 +7576,11 @@ compute_topological_descriptors(Molecule & m,
   descriptor[iwdescr_fdcca].set(static_cast<float>(two_connected_chain_atom) / static_cast<float>(matoms));
 
   descriptor[iwdescr_rotbond].set(static_cast<float>(rotatable_bonds));
-  descriptor[iwdescr_frotbond].set(iwmisc::Fraction<float>(rotatable_bonds, m.nedges()));
+  if (m.nedges() == 0) {
+    descriptor[iwdescr_frotbond].set(0.0f);
+  } else {
+    descriptor[iwdescr_frotbond].set(iwmisc::Fraction<float>(rotatable_bonds, m.nedges()));
+  }
   descriptor[iwdescr_ringatom].set(static_cast<float>(ring_atom_count));
   if (ring_atom_count)
   {
