@@ -2,7 +2,7 @@
 
 Based on the very nice post by Pat Walters
 [Practical Cheminformatics](https://practicalcheminformatics.blogspot.com/2024/11/some-thoughts-on-splitting-chemical.html)
-I decided to apply train_test_split_optimise to the Biogen ADME datasets
+I decided toapply trawn_test_split_optimise to the Biogen ADME datasets
 he uses.
 
 Pat covers various splitting strategies that I will not recreate here. Instead
@@ -20,7 +20,8 @@ I will compare the Biogen features with a smaller set of 285 features
 from LillyMol [iwdescr](/docs/Molecule_Tools/iwdescr.md) and some Abraham features.
 
 Build XGBoost models on the Biogen training sets for both the Biogen features and
-the LillyMol features. Measure R2, so higher numbers are better. All models are built
+the LillyMol features. Score the Biogen training sets and measure R2, so higher numbers
+are better. All models are built
 in about 10 seconds. No hyperparamter tuning was attempted, use the defaults built
 into LillyMol script [xgbd_make](/contrib/bin/xgbd/xgbd_make.py).
 
@@ -36,7 +37,7 @@ into LillyMol script [xgbd_make](/contrib/bin/xgbd/xgbd_make.py).
 Generally the 285 LillyMol features perform better - although this is not universally
 true, and when the Biogen features are better, the difference is small. Use the LillyMol
 features going forward, especially since there are many fewer of them than what came
-from Biogen.
+from Biogen. Also the LillyMol features do not have any NaN values.
 
 Using RMS as a measure of performance shows similar results, smaller numbers are better
 | DataSet | Biogen | LillyMol |

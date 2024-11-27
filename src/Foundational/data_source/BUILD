@@ -50,12 +50,12 @@ cc_library(
     hdrs = [
         "iwrecordio.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//Foundational/iwmisc",
         "//Foundational/iwstring",
         "@com_google_protobuf//:protobuf",
     ],
-    visibility = ["//visibility:public"],
 )
 
 proto_library(
