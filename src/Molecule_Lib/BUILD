@@ -3,6 +3,15 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "inchi_yes",
+    values = {"define": "BUILD_INCHI=1"}
+)
+config_setting(
+    name = "inchi_no",
+    values = {"define": "BUILD_INCHI=0"}
+)
+
 #filegroup(
 #    name = "charge_assigner_data",
 #    srcs = glob([":charge_assigner/**"]),
@@ -478,7 +487,6 @@ cc_library(
         "charmm.cc",
         "cif.cc",
         "csv.cc",
-        "inchi_dummy.cc",
         "marvin.cc",
         "mdl.cc",
         "mdl_v30.cc",
@@ -491,7 +499,12 @@ cc_library(
         "smi.cc",
         "tripos.cc",
         "xyz.cc",
-    ],
+    ] +
+    select({
+        "inchi_yes": ["inchi.cc"],
+        "inchi_no": ["inchi_dummy.cc"],
+        "//conditions:default": ["inchi_dummy.cc"],
+    }),
     hdrs = [
         "readmdl.h",
         "rwmolecule.h",
@@ -502,7 +515,12 @@ cc_library(
     ],
     deps = [
         ":iwmolecule",
-    ],
+    ] +
+    select({
+        "inchi_yes": ["@inchi//:inchi"],
+        "inchi_no": [],
+        "//conditions:default": [],
+    }),
     alwayslink = True,
 )
 
