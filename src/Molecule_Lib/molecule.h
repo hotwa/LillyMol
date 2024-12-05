@@ -2611,7 +2611,7 @@ extern void set_copy_name_in_molecule_copy_constructor(int);
 
 extern int is_fixed_kekule_form(const Molecule& m, const Ring& r);
 
-extern int inchi_to_inchi_key(const char* inchi, IWString& key);
+extern int InChIToInChIKey(const char* inchi, IWString& key);
 
 template <typename F>
 void

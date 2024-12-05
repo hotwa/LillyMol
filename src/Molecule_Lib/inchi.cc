@@ -13,11 +13,12 @@
 
 using std::cerr;
 
-int inchi_to_inchi_key(const char * inchi,IWString & key)
+int
+InChIToInChIKey(const char * inchi, IWString & key)
 {
   char ikey[100];
   int ret=GetStdINCHIKeyFromStdINCHI(inchi,ikey);
-  if ( ret == INCHIKEY_OK)
+  if (ret == INCHIKEY_OK)
   {
     key=ikey;
     return 1;
@@ -215,6 +216,15 @@ Molecule::read_molecule_inchi_ds(iwstring_data_source & input)
 
   return build_from_inchi(buffer);
 }
+
+// A caution here. If we look at the two molecules
+// OC(=O)CN1c2c(CC[C@H](NC(=O)[C@@H](S)Cc3ccccc3)C1=O)cccc2 CHEMBL299639
+// OC(=O)CN1c2c(CC[C@H](NC(=O)[C@H](S)Cc3ccccc3)C1=O)cccc2 CHEMBL422944
+// embedded in an entire Chembl smiles file, they generate the same InChI with fileconv -o inchi
+// But if we put the two molecules in their own file, they generate different inchi.
+// And if we put them into other files, things are good.
+// Not sure what is going on, but it does seem like a red flag.
+// Running with --config=asan is fine, so bit of a mystery.
 
 //#define DEBUG_MAKE_INCHI_STRING
 

@@ -182,7 +182,7 @@ if [[ -v BUILD_INCHI ]] ; then
   else
     (cd InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/ && bash run_make_on_linux.sh)
   fi
-  # Ensure canonical form
+  # Ensure canonical form for shell variable.
   BUILD_INCHI=1
 else
   BUILD_INCHI=0

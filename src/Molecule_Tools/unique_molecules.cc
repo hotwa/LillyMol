@@ -36,6 +36,10 @@ using std::cerr;
 #include "Molecule_Lib/smiles.h"
 #include "Molecule_Lib/standardise.h"
 
+#if defined(BUILD_INCHI)
+#include "inchi_api.h"
+#endif
+
 #ifdef BUILD_BAZEL
 #include "Molecule_Tools/dicer_fragments.pb.h"
 #else
@@ -133,6 +137,10 @@ static resizable_array_p<IWReaction> reaction;
 static int number_reactions = 0;
 static int molecules_changed_by_reactions = 0;
 
+#ifdef BUILD_INCHI
+static int use_inchi = 0;
+#endif
+
 static int
 UpdateDicerFragmentHash(Molecule& m, const IWString& usmi) {
   const int matoms = m.natoms();
@@ -185,8 +193,26 @@ UpdateHash(Molecule& m, const IWString& usmi) {
   }
 }
 
+#ifdef BUILD_INCHI
+static int
+IsUniqueInChI(Molecule& m) {
+  IWString inchi;
+  m.InChI(inchi);
+
+  IWString inchi_key;
+  InChIToInChIKey(inchi.data(), inchi_key);
+
+  return UpdateSmilesHash(m, inchi_key);
+}
+#endif
+
 static int
 is_unique_molecule(Molecule& m) {
+#ifdef BUILD_INCHI
+  if (use_inchi) {
+    return IsUniqueInChI(m);
+  }
+#endif
   if (exclude_chiral_info) {
     set_include_chiral_info_in_smiles(0);
   }
@@ -552,6 +578,9 @@ usage(int rc) {
   cerr << "  -z             exclude cis/trans bonding information\n";
   cerr << "  -I             ignore isotopic labels\n";
   cerr << "  -y             all non-zero isotopic values considered equivalent\n";
+#ifdef BUILD_INCHI
+  cerr << "  -C             use InChi for structure comparisons\n";
+#endif
   cerr << "  -p <fname>     specify previously collected molecules\n";
   cerr << "  -s <size>      specify primary hash size (default " << default_primary_hash_size << ")\n";
   cerr << "  -S <name>      specify output file name stem\n";
@@ -711,7 +740,8 @@ WriteHash(std::ostream& output) {
 
 static int
 unique_molecule(int argc, char** argv) {
-  Command_Line cl(argc, argv, "t:Tag:D:vS:A:E:X:i:o:ls:czfG:p:Ir:n:K:eR:jhU:yd");
+  // Note that the -C option for InChI is always present
+  Command_Line cl(argc, argv, "t:Tag:D:vS:A:E:X:i:o:ls:czfG:p:Ir:n:K:eR:jhU:ydC");
 
   verbose = cl.option_count('v');
 
@@ -738,6 +768,15 @@ unique_molecule(int argc, char** argv) {
       return 5;
     }
   }
+
+#ifdef BUILD_INCHI
+  if (cl.option_present('C')) {
+    use_inchi = 1;
+    if (verbose) {
+      cerr << "Structure comparisons done via InChI\n";
+    }
+  }
+#endif
 
   if (cl.option_present('n')) {
     if (!number_assigner.initialise(cl, 'n', verbose > 1)) {
