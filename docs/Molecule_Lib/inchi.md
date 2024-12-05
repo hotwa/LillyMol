@@ -2,8 +2,8 @@
 If the shell variable BUILD_INCHI is set during the build process, LillyMol executables
 will include the ability to read and write InChI.
 
-Note that the resulting executable will have a run-time library dependency for InChI which
-you will need to manage.
+Note that the resulting executables will have a run-time library dependency for InChI which
+you will need to manage via LD_LIBRARY_PATH.
 
 This brings up some interesting issues.
 
@@ -22,22 +22,34 @@ For example, given 1000 random Chembl molecules, 104 do not produce the starting
 smiles during a round trip conversion.
 
 These include things like
+
 ![CHEMBL532375](Images/CHEMBL532375.png)
+
 are transformed to
+
 ![CHEMBL532375](Images/CHEMBL532375_inchi.png)
+
 by InChI.
 
 and 
+
 ![CHEMBL592141](Images/CHEMBL592141.png)
+
 which is converted to
+
 ![CHEMBL592141](Images/CHEMBL592141_inchi.png)
+
 which again is not converted back to its original form by any of the default
 standardisations in LillyMol.
 
 Also
+
 ![CHEMBL4764428](Images/CHEMBL4764428.png)
+
 which is converted to
+
 ![CHEMBL4764428](Images/CHEMBL4764428_inchi.png)
+
 which again is not converted back to the starting form via default transformations
 built into LillyMol
 
