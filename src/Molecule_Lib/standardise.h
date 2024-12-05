@@ -379,6 +379,8 @@ class IWStandard_Current_Molecule
 #define CS_ENOL_FUSED "enol-fused"
 #define CS_FCNO "fcno"
 #define CS_ISOTOPE "isotope"
+#define CS_2AMINO_PYRIDINE "to2ap"
+#define CS_OXO_PYRIMIDINE "oxopyrimidine"
 
 
 namespace standardise {
@@ -452,6 +454,8 @@ class Chemical_Standardisation
     Chemical_Transformation _transform_124_triazine;
     Chemical_Transformation _transform_enol_fused;
     Chemical_Transformation _transform_charged_non_organic;
+    Chemical_Transformation _transform_to_2_amino_pyridine;
+    Chemical_Transformation _transform_oxo_pyrimidine;
     Chemical_Transformation _transform_isotopes;
 
 //  Various reverse direction transformations
@@ -614,6 +618,11 @@ class Chemical_Standardisation
     int _do_transform_charged_non_organics(Molecule& m,
                 IWStandard_Current_Molecule& current_molecule_data);
     int  _do_transform_implicit_hydrogen_known_errors (Molecule & m, IWStandard_Current_Molecule & current_molecule_data);
+
+    int _do_transform_to_2_amino_pyridine(Molecule& m, 
+                        IWStandard_Current_Molecule& current_molecule_data);
+    int _do_transform_oxo_pyrimidine(Molecule& m,
+                IWStandard_Current_Molecule& current_molecule_data);
 
     int _activate_nohmove_transformations();
 

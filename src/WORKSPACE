@@ -112,7 +112,7 @@ cc_library (
 
 new_local_repository(
     name = "pybind11",
-    path = "/lrlhps/data/c3tk/dev/virtenv/gc3tk-env/include",
+    path = "/home/ian/venv_3.11/lib/python3.11/site-packages/pybind11/include",
     build_file_content = """
 cc_library (
     name = "pybind11",
@@ -139,7 +139,7 @@ new_local_repository(
 # local needs.
 new_local_repository(
     name = "python",
-    path = "/lrlhps/data/c3tk/dev/virtenv/gc3tk-env/include/python3.11",
+    path = "/home/ian/third_party/PYTHON3.11/include/python3.11",
     build_file_content = """
 cc_library(
     name = "python",
@@ -177,7 +177,7 @@ new_local_repository(
 cc_library (
     name = "libzmq",
     srcs = [
-        "lib64/libzmq.a",
+        "lib/libzmq.a",
     ],
     hdrs = [
         "include/zmq.h",
@@ -249,6 +249,29 @@ cc_library(
 )
 """
 )
+###
+
+new_local_repository(
+    name = "inchi",
+    path = "../third_party",
+    build_file_content = """
+cc_library(
+    name = "inchi",
+    srcs = glob(
+               ["InChI/INCHI-1-SRC/INCHI_API/bin/Linux/libinchi.so*"],
+          ),
+    hdrs = glob (
+               ["InChI/INCHI-1-SRC/INCHI_BASE/src/*.h"]
+           ),
+    strip_include_prefix = "InChI/INCHI-1-SRC/INCHI_BASE/src",
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
+
+
+###
 
 #local_repository(
 #    name = "com_github_grpc_grpc",

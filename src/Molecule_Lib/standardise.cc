@@ -3,9 +3,10 @@
 */
 
 #include <array>
+#include <algorithm>
 #include <iostream>
 #include <memory>
-#include <algorithm>
+#include <vector>
 
 #define RESIZABLE_ARRAY_IMPLEMENTATION
 #define RESIZABLE_ARRAY_IWQSORT_IMPLEMENTATION
@@ -34,7 +35,6 @@
 #endif
 
 using std::cerr;
-using std::endl;
 using standardise::Canonicalise;
 using standardisation::ExternalTransformation;
 
@@ -382,6 +382,8 @@ Chemical_Standardisation::activate_all()
   _transform_124_triazine.activate();
   _transform_enol_fused.activate();
   _transform_charged_non_organic.activate();
+  _transform_to_2_amino_pyridine.activate();
+  _transform_oxo_pyrimidine.activate();
 
   _active = 1;
 
@@ -446,26 +448,28 @@ display_all_chemical_standardisation_options(std::ostream & os, char zoption)
   os << zopt << CS_CHARGED_IMIDAZOLE << "   convert charged imidazoles to have n+ near cD3\n";
   os << zopt << CS_PYRAZOLE << "    convert pyrazoles to have nH near electron withdrawing\n";
   os << zopt << CS_TRIAZOLE << "    convert triazoles to have nH near electron withdrawing\n";
-  os << zopt << CS_TETRAZOLE << "    convert tetrazoles to have nH near attachment\n";
+  os << zopt << CS_TETRAZOLE << "   convert tetrazoles to have nH near attachment\n";
   os << zopt << CS_LACTIM_LACTAM << "        convert lactim to lactam form (non ring)\n";
   os << zopt << CS_LACTIM_LACTAM_RING << "       convert lactim to lactam form (ring)\n";
-  os << zopt << CS_ISOXAZOLE << "       convert Hydroxy isoxazoles to O= forms\n";
-  os << zopt << CS_ARGUAN << "       aromatic \"gauanidines\" - adjacent to =O, better name needed\n";
-  os << zopt << CS_PYRAZOLONE << "       convert pyrazolone to keto form\n";
-  os << zopt << CS_AMINO_THIAZOLE << "     convert -N=c1scc[nH]1 to -[NH]c1sccn1\n";
+  os << zopt << CS_ISOXAZOLE << "   convert Hydroxy isoxazoles to O= forms\n";
+  os << zopt << CS_ARGUAN << "      aromatic \"gauanidines\" - adjacent to =O, better name needed\n";
+  os << zopt << CS_PYRAZOLONE << "    convert pyrazolone to keto form\n";
+  os << zopt << CS_AMINO_THIAZOLE << "  convert -N=c1scc[nH]1 to -[NH]c1sccn1\n";
   os << zopt << CS_KETO_ENOL << "     convert enol to keto forms (no adjacent heteroatoms)\n";
-  os << zopt << CS_4_PYRIDONE << "     convert 4 pyridol to pyridone form\n";
-  os << zopt << CS_SULFONYL_UREA << "     convert S-C(=N)-N to S=C(-N)-N\n";
-  os << zopt << CS_124TRIAZINE << "     convert S-C(=N)-N to S=C(-N)-N\n";
-  os << zopt << CS_ENOL_FUSED << "     convert [O,S;D1]-c(:n):[aD3x3] to O=C form\n";
-  os << zopt << CS_ISOTOPE << "     convert all isotopic atoms to non isotopic forms\n";
+  os << zopt << CS_4_PYRIDONE << "    convert 4 pyridol to pyridone form\n";
+  os << zopt << CS_SULFONYL_UREA << "         convert S-C(=N)-N to S=C(-N)-N\n";
+  os << zopt << CS_124TRIAZINE << "  convert S-C(=N)-N to S=C(-N)-N\n";
+  os << zopt << CS_ENOL_FUSED << "    convert [O,S;D1]-c(:n):[aD3x3] to O=C form\n";
+  os << zopt << CS_ISOTOPE << "       convert all isotopic atoms to non isotopic forms\n";
+  os << zopt << CS_2AMINO_PYRIDINE << "         convert exocyclic N=C:[nH] to N-c:n (InChI generates these)\n";
 
   os << zopt << CS_ALL << "         ALL the above standardistions\n";
   os << zopt << CS_REVERSE_NITRO << "     convert O=N=O nitro groups to charge separated\n";
   os << zopt << CS_REVERSE_NV5 << "       convert all 5 valent N atoms to charge separated\n";
   os << zopt << "APP=<xxx>   append 'xxx' to the name of changed molecules\n";
   os << zopt << "APP=EACH    append the reason for each change\n";
-  os << zopt << "EXT:F:/path/to/proto   file of external standardisation(s) standardisation::Standardisation proto\n";
+  os << zopt << "EXT:/path/to/textproto   file of external standardisation(s) standardisation::Standardisation proto\n";
+  os << "                                 one proto per line, eg: smarts: \"[ND1H1]=[CD3]-[OD1H]\" smiles: \"N-C=O\"\n";
 
   return 1;
 }
@@ -865,13 +869,19 @@ Chemical_Standardisation::Activate(const IWString& directive,
   }
   else if (tmp == CS_ISOTOPE) {
     _transform_isotopes.activate();
+  }
+  else if (tmp == CS_2AMINO_PYRIDINE) {
+    _transform_to_2_amino_pyridine.activate();
+  } else if (tmp == CS_OXO_PYRIMIDINE) {
+    _transform_oxo_pyrimidine.activate();
   } else {
     cerr << "Chemical_Standardisation::Activate:unrecognized directive '" << directive << "'\n";
     return 0;
   }
 
-  if (!negation)
+  if (!negation) {
     _active++;
+  }
 
   return 1;
 }
@@ -3581,6 +3591,14 @@ Chemical_Standardisation::_process(Molecule & m,
   if (_transform_enol_to_keto.active())
     rc += _do_enol_to_keto(m, current_molecule_data);
 
+  if (_transform_to_2_amino_pyridine.active()) {
+    rc += _do_transform_to_2_amino_pyridine(m, current_molecule_data);
+  }
+
+  if (_transform_oxo_pyrimidine.active()) {
+    rc += _do_transform_oxo_pyrimidine(m, current_molecule_data);
+  }
+
   if (_external_transformation.size() > 0) {
     rc += DoExternalTransformations(m);
   }
@@ -3662,8 +3680,9 @@ Chemical_Standardisation::_process(Molecule & m)
 
   int valence_before_processing = 1;
 
-  if (_check_valence_before_and_after)
+  if (_check_valence_before_and_after) {
     valence_before_processing = m.valence_ok();
+  }
 
 // Removing atoms can mess up anything which comes after, so make 
 // sure we do that before anything else
@@ -3953,6 +3972,11 @@ Chemical_Standardisation::report(std::ostream & os) const
   if (_transform_124_triazine.active()) {
     os << "  124_triazine";
     _transform_124_triazine.report(os);
+  }
+
+  if (_transform_to_2_amino_pyridine.active()) {
+    os << "  to_2_amino_pyridine";
+    _transform_to_2_amino_pyridine.report(os);
   }
 
   return os.good();
@@ -6915,59 +6939,62 @@ Chemical_Standardisation::_do_transform_misdrawn_urea(Molecule & m,
     if (1 != ai->nbonds())
       continue;
 
-    atom_number_t c = ai->other(i, 0);
+    atom_number_t carbon = ai->other(i, 0);
 
-    if (3 != ncon[c])
+    if (3 != ncon[carbon])
       continue;
 
-    if (atom_is_aromatic[c])
+    if (atom_is_aromatic[carbon])
       continue;
 
-    const Atom * ac = atoms[c];
+    const Atom& ac = *atoms[carbon];
 
-    if (4 != ac->nbonds())
+    if (4 != ac.nbonds()) {
       continue;
+    }
 
-    atom_number_t singly_bonded_nitrogen = INVALID_ATOM_NUMBER;
-    atom_number_t doubly_bonded_nitrogen = INVALID_ATOM_NUMBER;
+    atom_number_t singly_bonded_nitrogen = kInvalidAtomNumber;
+    atom_number_t doubly_bonded_nitrogen = kInvalidAtomNumber;
 
-    for (int j = 0; j < ncon[c]; j++)
-    {
-      const Bond * b = ac->item(j);
+    for (const Bond* b : ac) {
+      atom_number_t k = b->other(carbon);
 
-      atom_number_t k = b->other(c);
-
-      if (7 != z[k])
+      if (k == i || z[k] != 7) {
         continue;
+      }
 
 // don't change N1C(=O)C=CC2=C1C=CC=C2.C(=O)(O)/C=C/C(=O)O PBCHM6038
 
-      if (b->is_double_bond())
-      {
-        if (! b->part_of_cis_trans_grouping())
+      if (b->is_double_bond()) {
+        if (! b->part_of_cis_trans_grouping()) {
           doubly_bonded_nitrogen = k;
-      }
-      else
+        }
+      } else {
         singly_bonded_nitrogen = k;
+      }
     }
 
-    if (INVALID_ATOM_NUMBER == doubly_bonded_nitrogen || INVALID_ATOM_NUMBER == singly_bonded_nitrogen)
+    if (kInvalidAtomNumber == doubly_bonded_nitrogen || kInvalidAtomNumber == singly_bonded_nitrogen) {
       continue;
+    }
 
-    m.set_bond_type_between_atoms(i, c, DOUBLE_BOND);
-    m.set_bond_type_between_atoms(c, doubly_bonded_nitrogen, SINGLE_BOND);
+    m.set_bond_type_between_atoms(i, carbon, DOUBLE_BOND);
+    m.set_bond_type_between_atoms(carbon, doubly_bonded_nitrogen, SINGLE_BOND);
     rc++;
   }
 
-  if (rc)
-  {
-    _transform_misdrawn_urea.extra(rc);
+  if (rc == 0) {
+    return 0;
+  }
 
-    if (_verbose)
-      cerr << "Transformed " << rc << " misdrawn ureas\n";
+  _transform_misdrawn_urea.extra(rc);
 
-    if (_append_string_depending_on_what_changed)
-      _append_to_changed_molecules << " STD:MSDUR";
+  if (_verbose) {
+    cerr << "Transformed " << rc << " misdrawn ureas\n";
+  }
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:MSDUR";
   }
 
   return rc;
@@ -8964,6 +8991,8 @@ Chemical_Standardisation::_processing_needed(const IWStandard_Current_Molecule &
       (_transform_charged_non_organic.active() && current_molecule_data.non_organic() &&
        (current_molecule_data.npos() > 0 || current_molecule_data.nneg() > 0)) ||
       (_transform_enol_fused.active() && current_molecule_data.nrings() > 1) ||
+      (_transform_to_2_amino_pyridine.active() && current_molecule_data.nitrogens() > 1) ||
+      (_transform_oxo_pyrimidine.active() && current_molecule_data.nitrogens() > 1) ||
       (_transform_isotopes.active() && current_molecule_data.isotope() > 0)
     ) {
       return 1;
@@ -10308,15 +10337,9 @@ Chemical_Standardisation::AddExternalSpecification(const const_IWSubstring& dire
     tmp = *expanded;
   }
 
-  if (tmp.starts_with("F:")) {
-    tmp.remove_leading_chars(2);
-    if (! ReadFileOfExternalProtos(tmp)) {
-      cerr << "Chemical_Standardisation::AddExternalSpecification:cannot read '" << directive << "'\n";
-      cerr << tmp << '\n';
-      return 0;
-    }
-  } else {
-    cerr << "Chemical_Standardisation::AddExternalSpecification:unrecognised input " << directive << '\n';
+  if (! ReadFileOfExternalProtos(tmp)) {
+    cerr << "Chemical_Standardisation::AddExternalSpecification:cannot read '" << directive << "'\n";
+    cerr << tmp << '\n';
     return 0;
   }
 
@@ -10377,6 +10400,7 @@ Chemical_Standardisation::ReadExternalProto(const const_IWSubstring& buffer, con
 int
 ExternalTransformation::Build(const standardisation::Standardisation& proto,
                               const IWString& fname) {
+//  cerr << "ExternalTransformation::Build " << proto.ShortDebugString() << '\n';
   if (! proto.has_smiles()) {
     cerr << "ExternalTransformation::Build:no smiles\n";
     return 0;
@@ -10427,7 +10451,6 @@ ExternalTransformation::Process(Molecule& m) {
 
   Substructure_Results sresults;
   if (! _query.substructure_search(m, sresults)) {
-    cerr << "No substructure search match\n";
     return 0;
   }
 
@@ -10505,3 +10528,313 @@ Chemical_Standardisation::_do_unset_isotopes(Molecule& m) {
 
   return rc;
 } 
+
+// Transform 
+// O=C(NN)c1cc[nH]c(=N)c1 CHEMBL3091876
+// to
+// O=C(NN)c1cc[n]c(N)c1 CHEMBL3091876
+// Strategy is to first identify the likely candidates.
+// We elect to NOT process things like
+// CC=CC1=C(C(=CC(=C1)CC1=CNC(=N)NC1=N)CCC)OC CHEMBL528943
+// just because they are too hard - and this kind of transformation
+// is not common - there are fewer than 200 in Chembl.
+// There are 7 molecules in Chembl where there are 2 nH atoms adjacent
+// to the carbon atom, and again, we elect to not process these.
+// After initial implementation, adapt to process
+// N=C(N)Nc1sc(c2c(C)cccc2)[n][n]1 CHEMBL1188079
+// N=C(N)N=c1sc([n][nH]1)c1c(C)cccc1 CHEMBL1188079
+
+struct Possible2AP {
+  atom_number_t nitrogen;
+  atom_number_t carbon;
+  atom_number_t n1;
+  atom_number_t n2;
+
+  Possible2AP(atom_number_t n, atom_number_t c, atom_number_t an1, atom_number_t an2) :
+    nitrogen(n),
+    carbon(c),
+    n1(an1),
+    n2(an2)
+    {
+    }
+};
+
+int
+Chemical_Standardisation::_do_transform_to_2_amino_pyridine(Molecule& m, 
+                        IWStandard_Current_Molecule& current_molecule_data) {
+
+  const atomic_number_t* atomic_number = current_molecule_data.atomic_number();
+  const int* ncon = current_molecule_data.ncon();
+  const int* atom_is_aromatic = current_molecule_data.atom_is_aromatic();
+  const int* ring_membership = current_molecule_data.ring_membership();
+
+  std::vector<Possible2AP> possible_2ap;
+
+  int rc = 0;
+  const int matoms = m.natoms();
+  for (int i = 0; i < matoms; ++i) {
+    if (atomic_number[i] != 7) {
+      continue;
+    }
+
+    const Atom& a = m[i];
+    if (ncon[i] == 1) {
+    } else if (ncon[i] == 2 && ring_membership[i] == 0 && m.hcount(i) == 0) {
+    } else {
+      continue;
+    }
+
+    atom_number_t aromatic_carbon = kInvalidAtomNumber;
+
+    for (const Bond* b : a) {
+      if (! b->is_double_bond()) {
+        continue;
+      }
+      atom_number_t o = b->other(i);
+      if (atomic_number[o] != 6) {
+        continue;
+      }
+      if (ncon[o] != 3) {
+        continue;
+      }
+      if (! atom_is_aromatic[o]) {
+        continue;
+      }
+      aromatic_carbon = o;
+      break;
+    }
+
+    if (aromatic_carbon == kInvalidAtomNumber) {
+      continue;
+    }
+
+    atom_number_t n1 = kInvalidAtomNumber;
+    atom_number_t n2 = kInvalidAtomNumber;
+
+    const Atom& c = m[aromatic_carbon];
+    if (c.ncon() != 3) [[unlikely]] {  // not sure this could happen.
+      continue;
+    }
+
+    for (const Bond* b : c) {
+      if (! b->is_single_bond()) {
+        continue;
+      }
+
+      // Look for a singly bonded, fully saturated Nitrogen.
+      atom_number_t o = b->other(aromatic_carbon);
+      if (atomic_number[o] == 7 &&
+          ncon[o] == 2 &&
+          m.unsaturation(o) == 0 &&
+          m.hcount(o) == 1) {
+        if (n1 == kInvalidAtomNumber) {
+          n1 = o;
+        } else {
+          n2 = o;
+          break;
+        }
+      }
+    }
+
+    if (n1 == kInvalidAtomNumber) {
+      continue;
+    }
+
+    possible_2ap.emplace_back(Possible2AP{i, aromatic_carbon, n1, n2});
+  }
+
+  const int n = possible_2ap.size();
+  if (n == 0) {
+    return 0;
+  }
+
+  // Turn off groups that are in the same ring.
+  if (n > 1) {
+    for (int i = 0; i < n; ++i) {
+      atom_number_t c1 = possible_2ap[i].carbon;
+      if (c1 == kInvalidAtomNumber) {
+        continue;
+      }
+
+      for (int j = i + 1; j < n; ++j) {
+        atom_number_t c2 = possible_2ap[j].carbon;
+        if (m.in_same_ring(c1, c2)) {
+          possible_2ap[i].carbon = kInvalidAtomNumber;
+          possible_2ap[j].carbon = kInvalidAtomNumber;
+        }
+      }
+    }
+  }
+
+  for (int i = 0; i < n; ++i) {
+    atom_number_t carbon = possible_2ap[i].carbon;
+    if (carbon == kInvalidAtomNumber) {
+      continue;
+    }
+    const atom_number_t nitrogen = possible_2ap[i].nitrogen;
+
+    m.set_bond_type_between_atoms(nitrogen, carbon, SINGLE_BOND);
+
+    const atom_number_t n1 = possible_2ap[i].n1;
+    const atom_number_t n2 = possible_2ap[i].n2;
+    // Deliberate decision to NOT process these.
+    if (n2 != kInvalidAtomNumber) {
+      continue;
+    }
+
+    m.set_bond_type_between_atoms(carbon, n1, DOUBLE_BOND);
+    ++rc;
+  }
+
+  if (rc == 0) {
+    return 0;
+  }
+
+  _transform_to_2_amino_pyridine.extra(rc);
+
+  if (_verbose)  {
+    cerr << "Transformed " << rc << " to 2 amino pyridine forms\n";
+  }
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:2AminePyridine";
+  }
+
+  return rc;
+}
+
+int
+Chemical_Standardisation::_do_transform_oxo_pyrimidine(Molecule& m,
+                IWStandard_Current_Molecule& current_molecule_data) {
+  const int matoms = m.natoms();
+
+  const int* ncon = current_molecule_data.ncon();
+  const atomic_number_t* atomic_number = current_molecule_data.atomic_number();
+  const int* atom_is_aromatic = current_molecule_data.atom_is_aromatic();
+  const int* ring_membership = current_molecule_data.ring_membership();
+
+  int rc = 0;
+
+  for (int i = 0; i < matoms; ++i) {
+    if (atomic_number[i] != 8) {
+      continue;
+    }
+    if (ncon[i] != 1) {
+      continue;
+    }
+
+    const Bond* b = m[i][0];
+    if (! b->is_double_bond()) {
+      continue;
+    }
+    const atom_number_t c1 = b->other(i);
+    if (! atom_is_aromatic[c1]) {
+      continue;
+    }
+    if (ncon[c1] != 3) [[unlikely]] {
+      continue;
+    }
+
+    atom_number_t n1 = kInvalidAtomNumber;
+    const Atom& ac1 = m[c1];
+    for (const Bond* b : ac1) {
+      atom_number_t o = b->other(c1);
+      if (o == i) {
+        continue;
+      }
+      if (atomic_number[o] != 7) {
+        continue;
+      }
+      if (ncon[o] != 2) {
+        continue;
+      }
+      if (! atom_is_aromatic[o]) {
+        continue;
+      }
+
+      n1 = o;
+    }
+
+    if (n1 == kInvalidAtomNumber) {
+      continue;
+    }
+
+    atom_number_t c2 = kInvalidAtomNumber;
+    const Atom& an1 = m[n1];
+    for (const Bond* b : an1) {
+      atom_number_t o = b->other(n1);
+      if (o == c1) {
+        continue;
+      }
+
+      if (ncon[o] != 3) {
+        continue;
+      }
+
+      c2 = o;
+      break;
+    }
+
+    if (c2 == kInvalidAtomNumber) {
+      continue;
+    }
+
+    atom_number_t n2 = kInvalidAtomNumber;
+    atom_number_t exocyclic = kInvalidAtomNumber;
+    const Atom& ac2 = m[c2];
+    for (const Bond* b : ac2) {
+      atom_number_t o = b->other(c2);
+      if (o == n1) {
+        continue;
+      }
+
+      // Outside ring, but if double bond, fail - exocyclic will not be set.
+      if (ring_membership[o] == 0) {
+        if (b->is_double_bond()) {
+          break;
+        }
+        exocyclic = o;
+      } 
+
+      if (atomic_number[o] != 7) {
+        continue;
+      }
+      if (ncon[o] != 2) {
+        continue;
+      }
+      n2 = o;
+    }
+
+    if (n2 == kInvalidAtomNumber || exocyclic == kInvalidAtomNumber) {
+      continue;
+    }
+
+    if (m.hcount(n2) != 1) {
+      continue;
+    }
+
+    if (n2 == kInvalidAtomNumber) {
+      continue;
+    }
+
+    m.set_bond_type_between_atoms(n1, c2, SINGLE_BOND);
+    m.set_bond_type_between_atoms(c2, n2, DOUBLE_BOND);
+    ++rc;
+  }
+
+  if (rc == 0) {
+    return 0;
+  }
+
+  _transform_oxo_pyrimidine.extra(rc);
+
+  if (_verbose)  {
+    cerr << "Transformed " << rc << " from oxo-pyrimidine ortho nH from n:c=O\n";
+  }
+
+  if (_append_string_depending_on_what_changed) {
+    _append_to_changed_molecules << " STD:oxypyrimdine";
+  }
+
+  return rc;
+}

@@ -441,6 +441,44 @@ TEST_F(TestStandardisation, TestExternalChargedAcid) {
   EXPECT_EQ(_m1.name(), "foo STD:acid") << "Name mismatch got " << _m1.name();
 }
 
+struct ExternalDirective {
+  IWString directive;
+  IWString smiles;
+  int expected_rc;
+  IWString expected_result;
+};
+
+class TestExternalDirective : public testing::TestWithParam<ExternalDirective> {
+  protected:
+    Chemical_Standardisation _chemical_standardisation;
+    Molecule _m;
+};
+
+TEST_P(TestExternalDirective, Tests) {
+  const auto params = GetParam();
+
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+
+  static constexpr int kVerbose = 0;
+
+  const_IWSubstring fname_not_used;
+  EXPECT_TRUE(_chemical_standardisation.ReadExternalProto(params.directive, fname_not_used));
+  EXPECT_EQ(_chemical_standardisation.process(_m), params.expected_rc);
+  if (params.expected_rc > 0) {
+    EXPECT_EQ(_m.unique_smiles(), params.expected_result) << " got " <<
+                _m.unique_smiles() << " expected " << params.expected_result;
+  }
+}
+INSTANTIATE_TEST_SUITE_P(TestExternalDirective, TestExternalDirective, testing::Values(
+  ExternalDirective({R"(smarts: "[ND1H1]=[CD3]-[OD1H]" smiles: "N-C=O" name: "amide")",
+                    "C1C2CCC1C(C2C(=N)O)C(=N)O CHEMBL1717199", 1,
+                    "O=C(N)C1C(C(=O)N)C2CC1CC2"}),
+  ExternalDirective({R"(smarts: "[NR0]=c1:[cD2]:[cD2]:[nH]:c:c1" smiles: "N-C=CC=N" name: "para-amino")",
+                    "N(C(=NC(C)C)O)S(=O)(=O)C1=CNC=CC1=NC1=CC(C)=CC=C1 CHEMBL1148", 1,
+                    "OC(=NC(C)C)NS(=O)(=O)c1c(Nc2cc(C)ccc2)cc[n]c1"})
+));
+
+
 struct ForStd {
   std::vector<IWString> directives;
   IWString smiles;
@@ -470,7 +508,40 @@ INSTANTIATE_TEST_SUITE_P(TestStandardisationP, TestStandardisationP, testing::Va
   ForStd{{"rvnv5"}, "N1(=NC(=N(=O)C2=CC(=CC=C12)OCCCN1CCOCC1)CC)=O CHEMBL553213", 
          "CCc1[n][n+]([O-])c2c([n+]1[O-])cc(OCCCN1CCOCC1)cc2"},
   ForStd{{"isotope"}, "[2H]-C", "C[H]"},
-  ForStd{{"isotope", "all"}, "[2H]-C", "C"}
+  ForStd{{"isotope", "all"}, "[2H]-C", "C"},
+
+  ForStd{{"to2ap"}, "O=C(NN)c1cc[nH]c(=N)c1 CHEMBL3091876", "O=C(NN)c1cc([n]cc1)N"},
+  ForStd{{"to2ap"}, "N=C(N)N=c1sc([n][nH]1)c1c(C)cccc1 CHEMBL1188079", "NC(=N)Nc1sc(c2c(C)cccc2)[n][n]1"},
+
+  ForStd{{"oxopyrimidine"}, "C1(=C(NC(=NC1=O)C)NCC1=CN=CC=C1)C#N CHEMBL17125", "O=c1[nH]c(C)[n]c(NCc2c[n]ccc2)c1C#N"}
+
+));
+
+struct NoChange {
+  std::vector<IWString> directives;
+  IWString smiles;
+};
+
+class TestStandardisationNoChange : public testing::TestWithParam<NoChange> {
+  protected:
+    Chemical_Standardisation _chemical_standardisation;
+    Molecule _m;
+};
+
+TEST_P(TestStandardisationNoChange, Tests) {
+  const auto params = GetParam();
+
+  static constexpr int kVerbose = 0;
+
+  for (const IWString& directive : params.directives) {
+    ASSERT_TRUE(_chemical_standardisation.Activate(directive, kVerbose));
+  }
+  ASSERT_TRUE(_m.build_from_smiles(params.smiles));
+  ASSERT_FALSE(_chemical_standardisation.process(_m));
+}
+INSTANTIATE_TEST_SUITE_P(TestStandardisationNoChange, TestStandardisationNoChange, testing::Values(
+  NoChange{{"to2ap"}, "C12=NC(=N)C=CN1[C@H]1O[C@H]([C@H](O)[C@H]1O2)CO CHEMBL4303543"},
+  NoChange{{"to2ap"}, "CC=CC1=C(C(=CC(=C1)CC1=CNC(=N)NC1=N)CCC)OC CHEMBL528943"}
 ));
 
 }  // namespace

@@ -1845,3 +1845,15 @@ iwstring_data_source::is_pipe() const {
 
   return S_ISFIFO(s.st_mode);
 }
+
+int
+iwstring_data_source::ReadAllRecords(IWString& destination) {
+  destination.reserve(destination.size() + file_size());
+
+  const_IWSubstring buffer;
+  while (next_record(buffer)) {
+    destination << buffer << '\n';
+  }
+
+  return _lines_read;
+}

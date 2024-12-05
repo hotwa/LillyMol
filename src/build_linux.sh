@@ -175,6 +175,19 @@ if [[ -v BUILD_ZEROMQ ]] ; then
   cp cppzmq/zmq.hpp ${third_party}/include
 fi
 
+if [[ -v BUILD_INCHI ]] ; then
+  git clone https://github.com/IUPAC-InChI/InChI
+  if [[ ! -d 'InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/' ]] ; then
+    echo 'INCHI directory InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/ not found, no Inchi' >&2
+  else
+    (cd InChI/INCHI-1-SRC/INCHI_API/libinchi/gcc/ && bash run_make_on_linux.sh)
+  fi
+  # Ensure canonical form
+  BUILD_INCHI=1
+else
+  BUILD_INCHI=0
+fi
+
 # Step 3: build LillyMol executables
 echo "Builds and installs LillyMol executables"
 echo "The assumption is that WORKSPACE and build_deps/install.bzl"

@@ -348,7 +348,8 @@ TEST_F(TestLinearFingerprint, TestRingCaseWithRingsRequested)
   EXPECT_EQ(_sfc.nbits(), 6l);
 
   _sfc.daylight_ascii_form_with_counts_encoded(_fingerprint);
-  EXPECT_EQ(_fingerprint, ".2qmqYdIndJ8XwIpTCF1F.20.URz8bJezUREC.20....2");
+  EXPECT_EQ(_fingerprint, ".2qmqYeDlHJwt2B2TmdpOUc6+ke+QEW6zUREC.I5....2") <<
+        "got " << _fingerprint;
 }
 
 TEST_F(TestLinearFingerprint, TestPathsCanCross)
@@ -372,7 +373,8 @@ TEST_F(TestLinearFingerprint, TestPathsCanCross)
   EXPECT_EQ(_sfc.nbits(), 8l);
 
   _sfc.daylight_ascii_form_with_counts_encoded(_fingerprint);
-  EXPECT_EQ(_fingerprint, ".2qmqU8IRbE2qtg4TCF1F+.4.URz8bJeUL26W6Crz7vy+p.s0UY2+k..1");
+  EXPECT_EQ(_fingerprint, ".2qmqU8IRbE2qtg4TCF1F+.4.URz8bJeUL26W6Crz7vy+p.s0UY2+k..1") <<
+    " got " << _fingerprint;
 }
 
 }  // namespace

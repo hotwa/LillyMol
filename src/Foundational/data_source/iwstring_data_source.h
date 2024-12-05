@@ -114,7 +114,7 @@ protected:
     iwstring_data_source (const char *,   int = STRING_DEFAULT_BUF_SIZE);
     iwstring_data_source (const IWString &, int = STRING_DEFAULT_BUF_SIZE);
 		
-	iwstring_data_source (bool isstringbuffer, const char *stringbuffer, int stringbuffer_size);
+    iwstring_data_source (bool isstringbuffer, const char *stringbuffer, int stringbuffer_size);
 
     ~iwstring_data_source ();
 
@@ -201,6 +201,10 @@ protected:
     int read_bytes (void *, size_t);
 
     size_t copy_raw_bytes (void *, const size_t);    // does a save and restore of the state, so it will not advance the file pointer - just got too complicated...
+
+    // From the current position, read all records into `destination`.
+    // Lines are separated by newline characters.
+    int ReadAllRecords(IWString& destination);
 };
 
 #endif  // FOUNDATIONAL_DATA_SOURCE_IWSTRING_DATA_SOURCE_H_
