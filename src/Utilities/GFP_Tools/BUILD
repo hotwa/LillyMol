@@ -780,6 +780,28 @@ cc_binary(
 )
 
 cc_binary(
+    name = "gfp_svmfp_score_v2",
+    srcs = [
+        "gfp_svmfp_score_v2.cc",
+    ],
+    deps = [
+        ":gfp_bit_subset",
+        ":gfp_model_cc_proto",
+        "//Foundational/accumulator",
+        "//Foundational/cmdline_v2:cmdline_v2",
+        "//Foundational/data_source:iwstring_data_source",
+        "//Foundational/iw_tdt",
+        "//Foundational/iwmisc",
+        "//Foundational/iwmisc:normalisation",
+        "//Foundational/iwmisc:sparse_fp_creator",
+        "//Foundational/iwqsort",
+        "//Utilities/General:class_label_translation_cc_proto",
+        "//Utilities/General:scaler",
+        "//Utilities/GFP_Tools:gfp",
+    ],
+)
+
+cc_binary(
     name = "gfp_to_descriptors",
     srcs = [
         "gfp_to_descriptors.cc",

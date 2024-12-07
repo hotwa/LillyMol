@@ -1577,6 +1577,7 @@ std::optional<float>
 ALogP::LogP(Molecule& m) {
 
   // Silently remove any explicit Hydrogen atoms.
+  m.transform_to_non_isotopic_form();
   m.remove_all(1);
 
   const int matoms = m.natoms();

@@ -185,7 +185,7 @@ Fingerprint_and_Weight::weighted_similarity(IW_General_Fingerprint& fp,
                                             float& max_similarity)
 {
   similarity_type_t sim;
-  if (EQUAL_WEIGHT_TANIMOTO == kernel_function) {
+  if (EQUAL_WEIGHT_TANIMOTO == kernel_function) [[likely]] {
     sim = this->equal_weight_tanimoto(fp);
   } else if (EQUAL_WEIGHT_DOT_PRODUCT == kernel_function) {
     sim = this->equal_weight_dot_product(fp);

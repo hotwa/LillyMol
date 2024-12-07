@@ -145,7 +145,7 @@ Options::Options() {
   _remove_chirality = 0;
   _smiles_tag = "$SMI<";
   _identifier_tag = "PCN<";
-  _alogp_tag = "NCZLOGP<";
+  _alogp_tag = "NCALOGP<";
   _function_as_tdt_filter = 0;
   _bit_replicates = 9;  // same default as clogp
   _flush_after_every_molecule = 0;
@@ -337,6 +337,8 @@ Options::Preprocess(Molecule& m) {
     return 0;
   }
 
+  // We don't want isotopes.
+  m.transform_to_non_isotopic_form();
   m.remove_all(1);  // Always
 
   if (_reduce_to_largest_fragment) {
