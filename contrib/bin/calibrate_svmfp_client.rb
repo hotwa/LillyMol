@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
+#!/usr/bin/env ruby
 
 require 'fileutils'
 
-# Client script for model_calibrate. Builds and scores xgboost models
-# using xgbd_make and xgbd_evaluate.
+# Client script for model_calibrate. Builds and scores svmfp models
+# using svmfp_make and svmfp_evaluate.
 
 require_relative 'lib/iwcmdline'
 
@@ -12,10 +13,10 @@ def usage(rc)
 end
 
 def main
-  cl = IWCmdline.new("-v-DESC=sfile-TRactivity=sfile-TEactivity=sfile-PRED=s-STATS=s-TMPDIR=s-uid=s")
+  cl = IWCmdline.new("-v-gfp=close-TRSMI=sfile-TESMI=sfile-TRactivity=sfile-TEactivity=sfile-PRED=s-STATS=s-TMPDIR=s-uid=s")
 
-  unless cl.option_present('DESC')
-    $stderr << "Must specify descriptor file via the -DESC option\n"
+  unless cl.option_present('gfp')
+    $stderr << "Must specify fingerprints via the -gfp option\n"
     usage(1)
   end
 
@@ -39,7 +40,6 @@ def main
     usage(1)
   end
 
-
   if cl.option_present('TMPDIR')
     tmpdir = cl.value('TMPDIR')
   elsif cl.option_present('uid')
@@ -50,6 +50,9 @@ def main
     usage(1)
   end
 
+  trsmi = cl.value('TRSMI')
+  tesmi = cl.value('TESMI')
+
   Dir.mkdir(tmpdir) unless File.directory?(tmpdir)
 
   if cl.unrecognised_options_encountered
@@ -59,7 +62,11 @@ def main
 
   verbose = cl.option_present('v')
 
-  descriptors = cl.value('DESC')
+  lillymol_home = ENV['LILLYMOL_HOME']
+  svmfp_make = "#{lillymol_home}/contrib/bin/svmfp/svmfp_make.sh"
+  svmfp_evaluate = "#{lillymol_home}/contrib/bin/svmfp/svmfp_evaluate.sh"
+
+  gfp = cl.value('gfp')
   train_activity = cl.value('TRactivity')
   test_activity = cl.value('TEactivity')
 
@@ -67,19 +74,12 @@ def main
 
   results = cl.value('STATS')
 
-  tmptrain = File.join(tmpdir, "train.dat")
-  tmptest = File.join(tmpdir, "test.dat")
   mdir = File.join(tmpdir, 'MODEL')
 
-  cmd = "descriptor_file_select_rows #{train_activity} #{descriptors} > #{tmptrain}"
-  system(cmd)
-  cmd = "descriptor_file_select_rows #{test_activity} #{descriptors} > #{tmptest}"
+  cmd = "#{svmfp_make} --mdir #{mdir} -gfp #{gfp} -gfp -A #{train_activity} #{trsmi}"
   system(cmd)
 
-  cmd = "xgbd_make.sh --mdir #{mdir} --activity #{train_activity} #{tmptrain}"
-  system(cmd)
-
-  cmd = "xgboost_model_evaluate.sh -mdir #{mdir} #{tmptest} > #{predicted}"
+  cmd = "#{svmfp_evaluate} -mdir #{mdir} #{tesmi} > #{predicted}"
   system(cmd)
 
   cmd = "iwstats -w -Y allequals -E #{test_activity} -p 2 #{predicted} > #{results}"

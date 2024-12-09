@@ -1,5 +1,5 @@
 #!/bin/bash
-if [[ ! LILLYMOL_HOME ]] ; then
+if [[ ! -v LILLYMOL_HOME ]] ; then
   export LILLYMOL_HOME=$(dirname $0)/../..
 fi
 

@@ -109,10 +109,17 @@ my $marvin_string = "";
 
 my $psa = 0;
 my $psa_bit_replicates = 0;
+
 my $abr = 0;
 my $abr_bit_replicates = 0;
 my $abp = 0;
 my $abp_bit_replicates = 0;
+
+my $alogp = 0;
+my $alogp_bit_replicates = 0;
+
+my $xlogp = 0;
+my $xlogp_bit_replicates = 0;
 
 my $temperature = 0;
 my $natoms = 0;
@@ -258,6 +265,8 @@ sub usage
   print STDERR " -MVD           FP Marvin logd 7.4\n" if ($expert);
   print STDERR " -PSA           FP Novartis Polar Surface Area\n" if ($expert);
   print STDERR " -ABR           FP Abraham fingerprint\n" if ($expert);
+  print STDERR " -ALOGP         FP alogp logp\n";
+  print STDERR " -XLOGP         FP xlogp logp\n";
   print STDERR " -ABP           FP Abraham and Platts fingerprint\n" if ($expert);
   print STDERR " -INS ... -INS  FP insert arbitrary pipelined commands, F:... to read from file\n" if ($expert);
   print STDERR " -D2F ... -D2F  FP use descriptors_to_fingerprint to insert bucketised descriptors (very flexible)\n" if ($expert);
@@ -1362,6 +1371,28 @@ OPTION: while ($argptr < @ARGV)
   {
     $psa = 1;
     $psa_bit_replicates = $1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-ALOGP")
+  {
+    $alogp = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-ALOGP(\d+)/)
+  {
+    $alogp = 1;
+    $alogp_bit_replicates = $1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt eq "-XLOGP")
+  {
+    $xlogp = 1;
+    $fingerprints_specified++;
+  }
+  elsif ($opt =~ /^-XLOGP(\d+)/)
+  {
+    $xlogp = 1;
+    $xlogp_bit_replicates = $1;
     $fingerprints_specified++;
   }
   elsif ($opt eq "-W")
@@ -2757,6 +2788,68 @@ if ($psa)
   $psa_cmd_pipe = "${psa_cmd} -f -";
 }
 
+my $alogp_cmd_first;
+my $alogp_cmd_pipe;
+
+if ($alogp)
+{
+  my $alogp_exe = find_executable("alogp");
+  my $alogp_cmd = "${alogp_exe}";
+
+  if ($alogp_bit_replicates > 0)
+  {
+    $alogp_cmd .= " -p ${alogp_bit_replicates} -J NCALOGP${alogp_bit_replicates}"
+  }
+  else
+  {
+    $alogp_cmd .= " -J NCALOGP"
+  }
+
+  if ($work_as_filter)
+  {
+    $alogp_cmd_first = "${alogp_cmd} ${dash_g} ${aromatic_smiles} FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $alogp_cmd_first = "${alogp_cmd} ${dash_g} ${aromatic_smiles} -f -";
+  }
+  else
+  {
+    $alogp_cmd_first = "${alogp_cmd} ${dash_g} ${aromatic_smiles} FILE";
+  }
+
+  $alogp_cmd_pipe = "${alogp_cmd} -f -";
+}
+
+my $xlogp_cmd_first;
+my $xlogp_cmd_pipe;
+
+if ($xlogp)
+{
+  my $xlogp_exe = find_executable("xlogp");
+  my $xlogp_cmd = "${xlogp_exe}";
+
+  if ($xlogp_bit_replicates > 0)
+  {
+    $xlogp_cmd .= " -p ${xlogp_bit_replicates} -J NCXLOGP${xlogp_bit_replicates}"
+  }
+
+  if ($work_as_filter)
+  {
+    $xlogp_cmd_first = "${xlogp_cmd} ${dash_g} ${aromatic_smiles} FILE";
+  }
+  elsif ($work_as_tdt_filter)
+  {
+    $xlogp_cmd_first = "${xlogp_cmd} ${dash_g} ${aromatic_smiles} -f -";
+  }
+  else
+  {
+    $xlogp_cmd_first = "${xlogp_cmd} ${dash_g} ${aromatic_smiles} FILE";
+  }
+
+  $xlogp_cmd_pipe = "${xlogp_cmd} -f -";
+}
+
 my $abr_cmd_first;
 my $abr_cmd_pipe;
 
@@ -3248,6 +3341,32 @@ while ($fingerprints_specified > 0)
     }
 
     $psa = 0;
+  }
+  elsif ($alogp)
+  {
+    if ($first)
+    {
+      $cmd = $alogp_cmd_first;
+    }
+    else
+    {
+      $cmd .= "| $alogp_cmd_pipe";
+    }
+
+    $alogp = 0;
+  }
+  elsif ($xlogp)
+  {
+    if ($first)
+    {
+      $cmd = $xlogp_cmd_first;
+    }
+    else
+    {
+      $cmd .= "| $xlogp_cmd_pipe";
+    }
+
+    $xlogp = 0;
   }
   elsif ($marvin)
   {

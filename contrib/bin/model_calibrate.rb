@@ -20,6 +20,9 @@ def read_fingerprints(fnames)
   result = []
   fnames.each do |fname|
     File.readlines(fname).each do |line|
+      line.chomp!
+      next if line.empty?
+      next if line[0] == '#'
       result << line.chomp
     end
   end
@@ -148,9 +151,10 @@ def write_command_file(splits, descriptor_files, fingerprints, predicted_stem, s
     fptxt = fp.gsub(' ', "")
     splits.each_with_index do |split, ndx|
       file << "calibrate_svmfp_client.sh -gfp #{fp} -gfp " +
-              "-TRsmi #{split.train_smi} -TRactivity #{split.train_activity} " +
-              "-TEsmi #{split.test_smi} -TEactivity #{split.test_activity} " +
-              "-PRED #{predicted_stem}.#{fptxt}.#{ndx} -STATS #{stats_stem}.#{fptxt}.#{ndx}" +
+              "-TRSMI #{split.train_smi} -TRactivity #{split.train_activity} " +
+              "-TESMI #{split.test_smi} -TEactivity #{split.test_activity} " +
+              "-PRED #{predicted_stem}.#{fptxt}.#{ndx} -STATS #{stats_stem}.#{fptxt}.#{ndx} " +
+              "-uid SVMFP#{fptxt}" +
               "\n"
       $stderr << "Wrote #{fp} split #{ndx}\n"
     end

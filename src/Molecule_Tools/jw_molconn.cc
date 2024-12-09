@@ -90,6 +90,7 @@ static int
 preprocess_molecule(Molecule& m) {
   //  only deal with the graph of no hydrogen atoms
 
+  m.transform_to_non_isotopic_form();
   m.remove_all(1);
   m.reduce_to_largest_fragment();  // always reduce to largest fragment
 
