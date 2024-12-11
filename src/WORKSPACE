@@ -4,81 +4,7 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # These external dependencies will have been built by build_third_party.sh
 
-##      new_local_repository(
-##          name = "berkeleydb",
-##          path = "../third_party/BDB",
-##          build_file_content = """
-##      cc_library(
-##          name = "berkeleydb",
-##          srcs = ["lib/libdb_cxx.a", "lib/libdb.a"],
-##          hdrs = ["include/db_cxx.h", "include/db.h" ],
-##          strip_include_prefix = "include",
-##          visibility = ["//visibility:public"],
-##      )
-##      """,
-##      )
-##      
-##      new_local_repository(
-##          name = "berkeleydbshared",
-##          path = "../third_party/BDB",
-##          build_file_content = """
-##      cc_library(
-##          name = "berkeleydb",
-##          srcs = ["lib/libdb_cxx.so", "lib/libdb.so"],
-##          hdrs = ["include/db_cxx.h", "include/db.h" ],
-##          strip_include_prefix = "include",
-##          visibility = ["//visibility:public"],
-##      )
-##      """,
-##      )
-##      
-##      new_local_repository(
-##          name = "local_f2c",
-##          path = "../third_party/libf2c",
-##          build_file_content = """
-##      cc_library(
-##          name = "f2c",
-##          srcs = ["libf2c.a"],
-##          hdrs = ["f2c.h"],
-##          visibility = ["//visibility:public"],
-##      )
-##      """,
-##      )
-
-##    new_local_repository(
-##        name = "charge_assigner",
-##        path = "../data/queries/charges",
-##        build_file_content = """
-##    filegroup(
-##        name = "charge_assigner_data",
-##        srcs = glob(["**"]),
-##        visibility = [
-##            "//visibility:public",
-##        ],
-##    )
-##    """
-##    )
-##    
-##    new_local_repository(
-##        name = "donor_acceptor",
-##        path = "../data/queries/hbonds",
-##        build_file_content = """
-##    filegroup(
-##        name = "donor_acceptor_data",
-##        srcs = glob(["**"]),
-##        visibility = [
-##            "//visibility:public",
-##        ],
-##    )
-##    """
-##    )
-
-
-#local_repository(
-#    name = "tbb",
-#    path = "../third_party/oneTBB",
-#)
-
+# Not actually being used.
 new_local_repository(
     name = "fast_float",
     path = "../third_party/include/",
@@ -110,29 +36,12 @@ cc_library (
 """
 )
 
-new_local_repository(
-    name = "pybind11",
-    path = "/home/ian/venv_3.11/lib/python3.11/site-packages/pybind11/include",
-    build_file_content = """
-cc_library (
-    name = "pybind11",
-    hdrs = glob(
-        ["pybind11/**/*.h"],
-    ),
-    deps = [
-        "@python",
-    ],
-    visibility = ["//visibility:public"],
-)
-"""
-)
-
-new_local_repository(
-   name = "pybind11_protobuf",
-   path = "../third_party/pybind11_protobuf",
-   workspace_file = "WORKSPACE",
-   build_file = "pybind11_protobuf/BUILD",
-)
+#  new_local_repository(
+#     name = "pybind11_protobuf",
+#     path = "../third_party/pybind11_protobuf",
+#     workspace_file = "WORKSPACE",
+#     build_file = "pybind11_protobuf/BUILD",
+#  )
 
 # in order to build LillyMol pybind11 bindings you will need a python
 # installation with pybind installed with that. Adjust this to meet
@@ -170,113 +79,8 @@ cc_library(
 """,
 )
 
-##     new_local_repository(
-##         name = "libzmq",
-##         path = "../third_party",
-##         build_file_content = """
-##     cc_library (
-##         name = "libzmq",
-##         srcs = [
-##             "lib/libzmq.a",
-##         ],
-##         hdrs = [
-##             "include/zmq.h",
-##         ],
-##         strip_include_prefix = "include",
-##         visibility = ["//visibility:public"],
-##     )
-##     """
-##     )
-##     
-##     new_local_repository(
-##         name = "cppzmq",
-##         path = "../third_party",
-##         build_file_content = """
-##     cc_library(
-##         name = "cppzmq",
-##         srcs = [
-##         ],
-##         hdrs = [
-##             "include/zmq.hpp",
-##         ],
-##         deps = [
-##             "@libzmq",
-##         ],
-##         strip_include_prefix = "include",
-##         visibility = ["//visibility:public"],
-##     )
-##     """
-##     )
-##     
-##     new_local_repository(
-##         name = "xgboost",
-##         path="../third_party",
-##         build_file_content = """
-##     cc_library(
-##         name = "xgboost",
-##         srcs = [
-##             "lib/libxgboost.so",
-##         ],
-##         hdrs =
-##             glob(
-##                 ["include/xgboost/**"],
-##             ),
-##         deps = [
-##         ],
-##         strip_include_prefix = "include",
-##         visibility = ["//visibility:public"],
-##     )
-##     """
-##     )
-##     
-##     # Needed for xgboost
-##     new_local_repository(
-##         name = "dlmc",
-##         path="../third_party",
-##         build_file_content = """
-##     cc_library(
-##         name = "dlmc",
-##         srcs = [
-##         ],
-##         hdrs =
-##             glob(
-##                 ["include/dmlc/**"],
-##             ),
-##         deps = [
-##         ],
-##         strip_include_prefix = "include",
-##         visibility = ["//visibility:public"],
-##     )
-##     """
-##     )
-##     ###
-
-#  new_local_repository(
-#      name = "inchi",
-#      path = "../third_party",
-#      build_file_content = """
-##    cc_library(
-##        name = "inchi",
-##        srcs = glob(
-##                   ["InChI/INCHI-1-SRC/INCHI_API/bin/Linux/libinchi.so*"],
-##              ),
-##        hdrs = glob (
-##                   ["InChI/INCHI-1-SRC/INCHI_BASE/src/*.h"]
-##               ),
-##        strip_include_prefix = "InChI/INCHI-1-SRC/INCHI_BASE/src",
-##        visibility = ["//visibility:public"],
-##    )
-##    """
-##    )
-
-
 
 ###
-
-#local_repository(
-#    name = "com_github_grpc_grpc",
-#    path = "../third_party/grpc",
-#)
 
 # THESE TARGETS REQUIRE THIRD PARTY LICENSED PRODUCTS.
 # If you have these products available, adjust the file

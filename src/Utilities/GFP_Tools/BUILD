@@ -1,4 +1,5 @@
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+# load("@rules_python//python:proto.bzl", "py_proto_library")
 # load("@rules_proto_grpc_cpp//:defs.bzl", "cpp_grpc_compile")
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
