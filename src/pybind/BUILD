@@ -1,5 +1,5 @@
 # load("@rules_python_pytest//python_pytest:defs.bzl", "py_pytest_test")
-load("@rules_python//python:py_test.bzl", "py_test")
+# load("@rules_python//python:py_test.bzl", "py_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -19,6 +19,7 @@ cc_library(
         "//Molecule_Tools:xlogp_lib",
         "@pybind11",
         "@python",
+#       "@third_party//:python",
     ],
 )
 
@@ -314,7 +315,7 @@ cc_library(
         "//Molecule_Tools_Bdb:iwecfp_database_lookup_lib_shared",
         "//Molecule_Tools_Bdb:selimsteg",
         "//Molecule_Tools_Bdb:structure_database_shared",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
         "@pybind11",
         "@python",
     ],

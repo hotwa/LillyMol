@@ -16,6 +16,34 @@ class TTSplit
   end
 end
 
+class Makefile
+  def initialize(fname)
+    @file = File.open(fname, "w")
+    @targets = []
+    @dependencies = []
+    @commands = []
+  end
+  def another_target(target, dependency, cmd)
+    @targets << target.gsub(/:/, "\\:")
+    @dependencies << dependency
+    @commands << cmd
+  end
+  def write
+    @file << "all:\n"
+    @file << "	"
+    @targets.each_with_index do |target, ndx|
+      @file << ' ' if ndx > 0
+      @file << "#{target}"
+    end
+    @file << "\n"
+
+    @targets.each_with_index do |target, ndx|
+      @file << "#{target}: #{@dependencies[ndx]}\n"
+      @file << "	#{@commands[ndx]}"
+    end
+  end
+end
+
 def read_fingerprints(fnames)
   result = []
   fnames.each do |fname|
@@ -33,7 +61,11 @@ end
 # For each of `niter` splits, look for the appropriate train/test and
 # smi/activity files and if present, create a TTSplit object.
 # Return an Array of the TTSplit objects found
+# If niter is set, we look for that many files.
+# If niter comes in as zero, we search for files
 def gather_split_files(train_stem, test_stem, niter)
+  niter = 100000 if niter.zero?
+
   result = []
   (0...niter).each do |i|
     train_smi = "#{train_stem}#{i}.smi"
@@ -61,7 +93,7 @@ def make_splits(smiles, activity, niter, trpct)
 end
 
 def main
-  cl = IWCmdline.new("-v-A=sfile-S=s-niter=ipos-TRpct=ipos--fp=sfile-appendfp=sfile-DESC=s-PRED=s")
+  cl = IWCmdline.new("-v-A=sfile-S=s-niter=ipos-TRpct=ipos--fp=sfile-appendfp=sfile-DESC=s-PRED=s-PS=s")
 
   if cl.unrecognised_options_encountered
     $stderr << "Unrecognised options encountered\n"
@@ -84,7 +116,7 @@ def main
 
   fingerprints = read_fingerprints(cl.values('fp'))
 
-  $stderr << "Read #{fingerprints.size} fingerprints\n"
+  $stderr << "Read #{fingerprints.size} fingerprints\n" if verbose
 
   if ARGV.empty?
     $stderr << "No smiles specified\n"
@@ -98,13 +130,31 @@ def main
 
   smiles = ARGV[0]
 
-  niter = if cl.option_present('niter')
-            cl.value('niter')
-          else
-            10
-          end
+  if cl.option_present('PS')
+    if cl.option_present('TRpct')
+      $stderr << "Warning, training set percent -TRpct not meaningful with previously split files\n"
+    end
+    splits = gather_split_files('TRAIN', 'TEST', 0)  # 0 arg means look for files already there.
+    if splits.empty?
+      $stderr << "Did not find any pre-split files (-PS)\n"
+      return 1
+    end
+    niter = splits.size
+    $stderr << "Found #{niter} pre split splits\n" if verbose
+  else
+    niter = if cl.option_present('niter')
+              niter = cl.value('niter')
+            else
+              niter = 10
+            end
 
-  $stderr << "Will generate #{niter} splits\n" if verbose
+    $stderr << "Will generate #{niter} splits\n" if verbose
+
+    splits = make_splits(smiles, activity_fname, niter, trpct)
+    if splits.empty?
+      $stderr << "Split generation failed\n";
+    end
+  end
 
   trpct = if cl.option_present('TRpct')
             cl.value('TRpct')
@@ -120,14 +170,9 @@ def main
                      'PRED'
                    end
 
-  splits = make_splits(smiles, activity_fname, niter, trpct)
-  if splits.empty?
-    $stderr << "Split generation failed\n";
-  end
-
   descriptor_files = []
   cl.values('DESC').each do |desc|
-    g = Dir.glob(desc)
+    g = Dir.glob(desc.split(','))
     if g.empty?
       $stderr << "Descriptor file glob #{desc} no matches\n"
       return 1
@@ -138,25 +183,34 @@ def main
   $stderr << "Processing #{descriptor_files.size} descriptor files\n" if verbose
   $stderr << descriptor_files << "\n"
 
+  makefile = Makefile.new("Makefile.calibrate")
+
   command_file = "model_calibrate.txt"
-  write_command_file(splits, descriptor_files, fingerprints, predicted_stem, stats_stem, command_file)
+  write_command_file(splits, descriptor_files, fingerprints, predicted_stem, stats_stem, makefile, command_file)
+
+  makefile.write
 
   0
 end
 
-def write_command_file(splits, descriptor_files, fingerprints, predicted_stem, stats_stem, command_file)
+def write_command_file(splits, descriptor_files, fingerprints, predicted_stem,
+                       stats_stem, makefile, command_file)
   $stderr << "Writing #{splits.size} splits with #{fingerprints.size} fingerprints\n"
   file = File.open(command_file, "w")
   fingerprints.each do |fp|
     fptxt = fp.gsub(' ', "")
+    $stderr << "Writing #{fp}\n"
     splits.each_with_index do |split, ndx|
-      file << "calibrate_svmfp_client.sh -gfp #{fp} -gfp " +
+      stats_file = "#{stats_stem}.#{fptxt}.#{ndx}"
+      cmd = ""
+      cmd << "calibrate_svmfp_client.sh -gfp #{fp} -gfp " +
               "-TRSMI #{split.train_smi} -TRactivity #{split.train_activity} " +
               "-TESMI #{split.test_smi} -TEactivity #{split.test_activity} " +
-              "-PRED #{predicted_stem}.#{fptxt}.#{ndx} -STATS #{stats_stem}.#{fptxt}.#{ndx} " +
-              "-uid SVMFP#{fptxt}" +
+              "-PRED #{predicted_stem}.#{fptxt}.#{ndx} -STATS #{stats_file} " +
+              "-uid SVMFP#{fptxt}.#{ndx}" +
               "\n"
-      $stderr << "Wrote #{fp} split #{ndx}\n"
+      file << cmd
+      makefile.another_target(stats_file, "#{split.train_smi}", cmd)
     end
   end
 

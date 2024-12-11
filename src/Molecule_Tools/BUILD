@@ -3219,7 +3219,7 @@ cc_library(
     deps = [
         "//Molecule_Lib:iw_vdw",
         "//Molecule_Lib:iwmolecule",
-        "@local_f2c//:f2c",
+        "@third_party//:f2c",
     ],
 )
 
@@ -3308,7 +3308,7 @@ cc_test(
     timeout = "short",
     srcs = ["alogp_test.cc"],
     data = [
-        "@charge_assigner//:charge_assigner_data",
+        "@data//:charge_assigner_data",
     ],
     deps = [
         ":alogp_lib",

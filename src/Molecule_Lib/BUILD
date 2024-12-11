@@ -517,7 +517,7 @@ cc_library(
         ":iwmolecule",
     ] +
     select({
-        "inchi_yes": ["@inchi//:inchi"],
+        "inchi_yes": ["@third_party//:inchi"],
         "inchi_no": [],
         "//conditions:default": [],
     }),
@@ -697,7 +697,7 @@ cc_test(
         "donor_acceptor_test.cc",
     ],
     data = [
-        "@donor_acceptor//:donor_acceptor_data",
+        "@data//:donor_acceptor_data",
     ],
     deps = [
         ":iwmolecule",

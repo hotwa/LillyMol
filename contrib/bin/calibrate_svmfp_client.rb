@@ -13,7 +13,7 @@ def usage(rc)
 end
 
 def main
-  cl = IWCmdline.new("-v-gfp=close-TRSMI=sfile-TESMI=sfile-TRactivity=sfile-TEactivity=sfile-PRED=s-STATS=s-TMPDIR=s-uid=s")
+  cl = IWCmdline.new("-v-gfp=close-TRSMI=sfile-TESMI=sfile-TRactivity=sfile-TEactivity=sfile-PRED=s-STATS=s-TMPDIR=s-uid=s-keep")
 
   unless cl.option_present('gfp')
     $stderr << "Must specify fingerprints via the -gfp option\n"
@@ -76,7 +76,7 @@ def main
 
   mdir = File.join(tmpdir, 'MODEL')
 
-  cmd = "#{svmfp_make} --mdir #{mdir} -gfp #{gfp} -gfp -A #{train_activity} #{trsmi}"
+  cmd = "#{svmfp_make} -v --mdir #{mdir} -gfp #{gfp} -gfp -A #{train_activity} #{trsmi}"
   system(cmd)
 
   cmd = "#{svmfp_evaluate} -mdir #{mdir} #{tesmi} > #{predicted}"
@@ -85,7 +85,7 @@ def main
   cmd = "iwstats -w -Y allequals -E #{test_activity} -p 2 #{predicted} > #{results}"
   system(cmd)
 
-  FileUtils.rm_rf(tmpdir)
+  FileUtils.rm_rf(tmpdir) unless cl.option_present('keep')
 end
 
 main

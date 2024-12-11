@@ -596,7 +596,7 @@ end
     outp = File.open(dfile, mode='w')
     raise "Cannot open raw results file '#{dfile}'" unless outp
 
-    outp << rx[i].source << "\n"
+#   outp << rx[i].source << "\n"
     predictors.each do |k, v|
       next unless (v.n(i) == nsplit)
 

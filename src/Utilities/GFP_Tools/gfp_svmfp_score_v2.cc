@@ -31,6 +31,7 @@
 
 #include "Utilities/GFP_Tools/bit_subset.h"
 #include "Utilities/GFP_Tools/gfp.h"
+
 #ifdef BUILD_BAZEL
 #include "Utilities/GFP_Tools/gfp_model.pb.h"
 #include "Utilities/GFP_Tools/gfp_to_svm_lite.pb.h"
@@ -40,6 +41,7 @@
 #endif
 
 namespace gfp_svmfp_evaluate {
+
 using std::cerr;
 
 int verbose = 0;
@@ -61,11 +63,20 @@ Fraction_as_String fraction_as_string;
 
 void
 Usage(int rc) {
-  cerr << "Evaluates svmfp model(s)\n";
+// clang-format off
+#if defined(GIT_HASH) && defined(TODAY)
+  cerr << __FILE__ << " compiled " << TODAY << " git hash " << GIT_HASH << '\n';
+#else
+  cerr << __FILE__ << " compiled " << __DATE__ << " " << __TIME__ << '\n';
+#endif
+  // clang-format on
+  // clang-format off
+  cerr << "Evaluates svmfp model(s) built with svmfp_make\n";
   cerr << " -mdir <dir>     one or more model directories\n";
   cerr << " -cwrite ...     what to write for classification models, '-cwrite help' for info\n";
   cerr << " -sas <n>        write the score as string with <n> digits of accuracy\n";
   cerr << " -v              verbose output\n";
+  // clang-format on
 
   exit(rc);
 }
@@ -152,26 +163,6 @@ ReadBinaryProto(const IWString& dirname, const std::string& fname) {
   IWString path_name = PathName(dirname, fname);
   return iwmisc::ReadBinaryProto<Proto>(path_name);
 }
-
-#ifdef NOT_NEEDED
-std::optional<IW_General_Fingerprint>
-CreateSubset(const IW_General_Fingerprint& gfp,
-                const GfpBitToFeatureMap::GfpBitXref& bit_xref) {
-  IW_General_Fingerprint result;
-
-  for (int i = 0; i < number_sparse_fingerprints(); ++i) {
-    const IWString& tag = sparse_fingerprint_tag(i);
-    const std::string as_string(tag.data(), tag.length());
-    auto iter = bit_xref.xref().find(as_string);
-    if (iter == bit_xref.xref().end()) {
-      cerr << "CreateSubset:no cross reference for " << tag << "'\n";
-      return std::nullopt;
-    }
-  }
-
-  return result;
-}
-#endif
 
 // The support vectors are stored in gfp form with a weight.
 class WeightedFingerprint {
@@ -447,6 +438,7 @@ SvmModel::PreProcess(IW_General_Fingerprint& gfp) {
   if (_flatten_counts) {
     FlattenSparseFingerprint(gfp);
   }
+
   return rc;
 }
 

@@ -28,7 +28,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -43,7 +43,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -59,7 +59,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -74,7 +74,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -89,7 +89,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -105,7 +105,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwbits",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -121,7 +121,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@re2",
         "@zlib",
     ],
@@ -139,7 +139,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -154,7 +154,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -170,7 +170,7 @@ cc_binary(
         "//Foundational/data_source:iwstring_data_source",
         "//Foundational/iw_tdt",
         "//Foundational/iwmisc",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@re2",
     ],
 )

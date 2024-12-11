@@ -111,10 +111,19 @@ static int records_discarded_for_zero_field = 0;
 
 static char gsub_spaces_in_tokens = ' ';
 
+// #define DEBUG_IWCUT
+
 static int
-invert_selections(resizable_array<int> & columns_requested, int ncol,
-                  int is_descriptor_file, int * tmp)
+invert_selections(resizable_array<int> & columns_requested,
+                  int ncol,
+                  int is_descriptor_file)
 {
+#ifdef DEBUG_IWCUT
+  cerr << "Inverting selections, input contains " << ncol << " columns\n";
+#endif
+
+  int * tmp = new_int(ncol, 1); std::unique_ptr<int> free_tmp(tmp);
+
   int nr = columns_requested.number_elements();
 
   for (int i = 0; i < nr; i++)
@@ -128,7 +137,7 @@ invert_selections(resizable_array<int> & columns_requested, int ncol,
     tmp[0] = 1;
 
   columns_requested.resize(0);
-  columns_requested.resize(ncol);
+  columns_requested.resize(ncol + 1);
 
   for (int i = 0; i < ncol; i++)
   {
@@ -137,22 +146,6 @@ invert_selections(resizable_array<int> & columns_requested, int ncol,
   }
 
   return 1;
-}
-
-//#define DEBUG_IWCUT
-
-static int
-invert_selections(resizable_array<int> & columns_requested,
-                  int ncol,
-                  int is_descriptor_file)
-{
-#ifdef DEBUG_IWCUT
-  cerr << "Inverting selections, input contains " << ncol << " columns\n";
-#endif
-
-  int * tmp = new_int(ncol, 1); std::unique_ptr<int> free_tmp(tmp);
-
-  return invert_selections(columns_requested, ncol, is_descriptor_file, tmp);
 }
 
 static int
@@ -706,6 +699,7 @@ iwcut(const const_IWSubstring & buffer,
   int nr = columns_requested.number_elements();
 
 #ifdef DEBUG_IWCUT
+  cerr << "Processing " << word_beginnings.number_elements() << " word beginnings\n";
   for (int i = 0; i < word_beginnings.number_elements(); i++)
   {
     cerr << ' ' << word_beginnings[i];
@@ -717,8 +711,9 @@ iwcut(const const_IWSubstring & buffer,
   {
     int c = columns_requested[i];
 
-    if (c < 0)
+    if (c < 0) {
       c = word_beginnings.number_elements() + c;
+    }
 
     int j;
 
@@ -825,8 +820,9 @@ iwcut(const const_IWSubstring & buffer,
 
   resizable_array<int> word_beginnings;
 
-  if (columns_in_input > 0)
+  if (columns_in_input > 0) {
     word_beginnings.resize(columns_in_input);
+  }
 
 //cerr << "Line " << __LINE__ << " iqt " << input_is_quoted_tokens << '\n';
 
@@ -843,8 +839,17 @@ iwcut(const const_IWSubstring & buffer,
   cerr << "ncol " << ncol << " count " << buffer.ccount(input_token_separator) << '\n';
 #endif
 
-  if (ncol > columns_in_input)
+  if (ncol > columns_in_input) {
     columns_in_input = ncol;
+  }
+
+  for (int col : columns_requested) {
+    if ((col + 1) > columns_in_input) {
+      cerr << "iwcut:request column " << (col + 1) << " but only " << columns_in_input << 
+              "columns in input\n";
+      return 0;
+    }
+  }
 
   return iwcut(buffer, word_beginnings, columns_requested, output);
 }
@@ -1374,15 +1379,15 @@ iwcut (int argc, char ** argv)
       usage(3);
     }
 
-//    if (verbose)
-//    {
-//      cerr << "Will extract these columns\n";
-//      for (int i = 0; i < columns_requested.number_elements(); i++)
-//      {
-//        cerr << ' ' << (columns_requested[i] + 1);
-//      }
-//      cerr << '\n';
-//    }
+    if (verbose)
+    {
+      cerr << "Will extract these columns\n";
+      for (int i = 0; i < columns_requested.number_elements(); i++)
+      {
+        cerr << ' ' << (columns_requested[i] + 1);
+      }
+      cerr << '\n';
+    }
   }
 
   if (cl.option_present('E'))

@@ -56,7 +56,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -73,7 +73,7 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -90,7 +90,7 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:molecular_formula_lib",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -107,7 +107,7 @@ cc_binary(
         "//Foundational/data_source:iwtfdata_record",
         "//Foundational/iwmisc",
         "//Molecule_Tools:dicer_fragments_cc_proto",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_protobuf//:protobuf",
     ],
 )
@@ -124,7 +124,7 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:iwreaction",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -139,7 +139,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -155,7 +155,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -171,7 +171,7 @@ cc_binary(
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -188,7 +188,7 @@ cc_binary(
         "//Foundational/iwstring:absl_hash",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -204,7 +204,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -220,7 +220,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -236,7 +236,7 @@ cc_binary(
         "//Foundational/iwmisc",
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_protobuf//:protobuf",
     ],
@@ -254,7 +254,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -270,7 +270,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -287,7 +287,7 @@ cc_library(
         "iwecfp_database",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -304,7 +304,7 @@ cc_library(
         ":iwecfp_database_shared",
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -320,7 +320,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -334,7 +334,7 @@ cc_library(
     ],
     deps = [
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )
 
@@ -350,7 +350,7 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydb",
+        "@third_party//:berkeley_static",
     ],
 )
 
@@ -366,6 +366,6 @@ cc_library(
     deps = [
         "//Foundational/cmdline:iwcmdline",
         "//Molecule_Lib:iwmolecule",
-        "@berkeleydbshared//:berkeleydb",
+        "@third_party//:berkeley_shared",
     ],
 )

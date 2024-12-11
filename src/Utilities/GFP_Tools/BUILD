@@ -460,8 +460,8 @@ cc_binary(
         "//Utilities/GFP_Tools:gfp_standard",
         "//Utilities/GFP_Tools:nearneighbours_cc_proto",
         "@com_google_protobuf//:protobuf",
-        "@cppzmq",
-        "@libzmq",
+        "@third_party//:cppzmq",
+        "@third_party//:libzmq",
     ],
 )
 
