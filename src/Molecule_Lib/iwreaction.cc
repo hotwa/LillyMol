@@ -2464,10 +2464,10 @@ Sidechain_Reaction_Site::construct_from_msi_object(const msi_object & msi,
     _replace_atom.add(b);
   }
 
-  if (_inter_particle_bonds.empty())
-  {
-    if (! _noop_reaction)
+  if (_inter_particle_bonds.empty()) {
+    if (! _noop_reaction) {
       cerr << "Sidechain_Reaction_Site::construct_from_msi_object: no joins specified\n";
+    }
   }
 
   const msi_object * nr;
