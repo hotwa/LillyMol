@@ -24,6 +24,7 @@ cc_library(
     hdrs =
         glob(
             ["include/dmlc/**"],
+            allow_empty=True,
         ),
     deps = [
     ],
@@ -39,6 +40,7 @@ cc_library(
     hdrs =
         glob(
             ["include/xgboost/**"],
+            allow_empty=True,
         ),
     deps = [
     ],
@@ -96,9 +98,11 @@ cc_library(
     name = "inchi",
     srcs = glob(
                ["InChI/INCHI-1-SRC/INCHI_API/bin/Linux/libinchi.so*"],
+               allow_empty=True,
           ),
     hdrs = glob (
-               ["InChI/INCHI-1-SRC/INCHI_BASE/src/*.h"]
+               ["InChI/INCHI-1-SRC/INCHI_BASE/src/*.h"],
+               allow_empty=True,
            ),
     strip_include_prefix = "InChI/INCHI-1-SRC/INCHI_BASE/src",
     visibility = ["//visibility:public"],

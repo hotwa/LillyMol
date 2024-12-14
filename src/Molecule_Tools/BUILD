@@ -134,6 +134,20 @@ local_install(
 )
 
 proto_library(
+    name = "bond_length_distribution_proto",
+    srcs = [
+        "bond_length_distribution.proto",
+    ],
+)
+
+cc_proto_library(
+    name = "bond_length_distribution_cc_proto",
+    deps = [
+       ":bond_length_distribution_proto",
+    ]
+)
+
+proto_library(
     name = "atomic_distance_fingerprint_proto",
     srcs = [
         "atomic_distance_fingerprint.proto",
@@ -961,6 +975,21 @@ cc_binary(
         "//Molecule_Lib:iwmolecule",
         "//Molecule_Lib:moleculeio",
     ],
+)
+
+cc_binary(
+   name = "get_bond_length_distributions",
+   srcs = [
+       "get_bond_length_distributions.cc",
+   ],
+   deps = [
+       ":bond_length_distribution_cc_proto",
+        "//Foundational/data_source:iwtfdata_record",
+        "//Molecule_Lib:iwmolecule",
+        "//Molecule_Lib:moleculeio",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_protobuf//:protobuf",
+   ]
 )
 
 cc_binary(
