@@ -42,3 +42,4 @@ build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
 # https://github.com/bazelbuild/bazel/issues/13186
 # test inherits from build, so this was causing recompiles.
 # test --cxxopt=-std=c++20 --cxxopt=-march=sandybridge --cxxopt=-mtune=sandybridge 
+common --enable_bzlmod
