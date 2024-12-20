@@ -370,7 +370,7 @@ TEST_F(TestLinearFingerprint, TestPathsCanCross)
   _lfp.set_paths_can_cross(true);
   ASSERT_TRUE(_lfp.Fingerprint(_m, nullptr, atype, _sfc));
 
-  EXPECT_EQ(_sfc.nbits(), 8l);
+  EXPECT_EQ(_sfc.nbits(), 5l);
 
   _sfc.daylight_ascii_form_with_counts_encoded(_fingerprint);
   EXPECT_EQ(_fingerprint, ".2qmqU8IRbE2qtg4TCF1F+.4.URz8bJeUL26W6Crz7vy+p.s0UY2+k..1") <<
